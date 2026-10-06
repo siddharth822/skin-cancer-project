@@ -1,149 +1,92 @@
-# SkinSight AI — PAD-UFES-20 + ISIC Combined Training
+# SkinSight AI
 
-This is the upgraded build of the new skin-cancer/skin-lesion project.
+Educational skin-lesion classification using **MobileNetV3-Small**. Six classes:
+ACK, BCC, MEL, NEV, SCC, SEK. ISIC AK maps to ACK, NV to NEV, BKL to SEK.
+BKL is broader than PAD's seborrheic keratosis, so this mapping is approximate.
 
-It deliberately does **not** reuse the previous project's HAM10000 + SD-198 + EfficientNetB0 setup.
+## Easiest GPU training workflow
 
-## Final data strategy
+Import `notebooks/train_kaggle.ipynb` into Kaggle. Enable an available GPU and
+Internet, then Run All. The notebook bundles this code, downloads the public
+PAD and resized ISIC datasets plus ground truth, validates matching, trains,
+and exports `skinsight_trained_app.zip`. GPU/account access and full-data downloads
+have not been verified here. Follow dataset licenses and attribution requirements.
 
-### Primary source: PAD-UFES-20
-Used because it contains smartphone clinical photographs and is therefore directly relevant to the project's mobile-camera use case.
+## Windows local workflow
 
-### Secondary source: ISIC 2019
-Used to add a much larger dermoscopic lesion source for overlapping lesion classes.
-
-The sources are NOT blindly merged. Each image is stored in a combined manifest with:
-- source
-- mapped class
-- patient/group identifier where available
-- original image ID
-- image path
-
-The sampler balances `source + class`, helping prevent ISIC from overwhelming the smaller smartphone dataset.
-
-## Shared six-class label space
-
-| Final label | Meaning | PAD-UFES-20 | ISIC 2019 |
-|---|---|---|---|
-| ACK | Actinic Keratosis | ACK | AK |
-| BCC | Basal Cell Carcinoma | BCC | BCC |
-| MEL | Melanoma | MEL | MEL |
-| NEV | Melanocytic Nevus | NEV | NV |
-| SCC | Squamous Cell Carcinoma | SCC | SCC |
-| SEK | Seborrheic / benign keratosis | SEK | BKL |
-
-ISIC classes outside this shared six-class target (for example dermatofibroma and vascular lesions) are intentionally excluded.
-
-## Folder layout after downloading datasets
-
-```text
-SkinSight_AI/
-  data/
-    pad/
-      metadata.csv
-      images/
-        ...
-    isic2019/
-      ground_truth.csv
-      metadata.csv        # optional but strongly preferred
-      images/
-        ...
-  ml/
-    prepare_combined.py
-    train.py
-```
-
-## 1. Create the Python environment
+Run these commands from `SkinSight_AI` (Python 3.12 recommended):
 
 ```powershell
 py -m venv .venv
-.venv\Scripts\activate
-python -m pip install --upgrade pip
-pip install -r requirements.txt
+.\.venv\Scripts\python -m pip install torch==2.7.0 torchvision==0.22.0 --index-url https://download.pytorch.org/whl/cpu
+.\.venv\Scripts\python -m pip install -r requirements.txt
+.\.venv\Scripts\python ml\prepare_combined.py --pad-meta "D:\SkinCancerData\PAD-UFES-20\extracted\metadata.csv" --pad-root "D:\SkinCancerData\PAD-UFES-20\extracted" --isic-gt "D:\SkinCancerData\ISIC-2019\ISIC_2019_Training_GroundTruth.csv" --isic-root "D:\SkinCancerData\ISIC-2019\extracted\train-image" --out data\combined_manifest.csv
+.\.venv\Scripts\python ml\train.py --manifest data\combined_manifest.csv --epochs 10 --batch-size 16 --size 160 --fine-tune --device auto --output-dir models
+.\.venv\Scripts\python run.py
 ```
 
-## 2. Build the combined manifest
+PAD image folders are scanned recursively. Missing images cause an error instead
+of a partial manifest. CPU training on a low-memory laptop is likely slow.
+`--device auto` selects CUDA if available; `--device cuda` requires a CUDA GPU.
+Pretrained weights download from PyTorch. Without `--fine-tune`, the backbone and
+its BatchNorm statistics stay frozen. `--from-scratch` requires `--fine-tune`.
 
-Adjust filenames if your downloaded CSVs have different names:
+Outputs: `models/skinsight_mobilenetv3_small.pt`, `metrics.json`, `train_split.csv`,
+`validation_split.csv`. Reports include per-source validation metrics.
+
+## Connect trained weights
+
+Copy the trained checkpoint to `SkinSight_AI/models/skinsight_mobilenetv3_small.pt`
+and restart the app. Alternatively set `SKINSIGHT_MODEL_PATH` to an absolute path.
+Only use trusted checkpoints; loading uses `weights_only=True`.
+Without a checkpoint `/api/health` reports `model_ready=false` and predictions
+return HTTP 503. Synthetic test weights must never be deployed.
+
+## Evaluation limits
+
+PAD groups by real patient IDs. ISIC ground truth has no patient IDs; official
+metadata supplies lesion groups where present. Lesion or image grouping **does not
+establish patient-level separation**. The resized mirror's `dummy_*` IDs are not
+genuine patient IDs. Validation selects the checkpoint; a separate internal test
+partition evaluates it afterward. Genuine ISIC patient metadata, probability
+calibration, and external smartphone testing remain needed. Source/class balancing cannot
+eliminate clinical-versus-dermoscopic domain shift. The 224px mirror is a practical
+baseline; original ISIC images contain more detail.
+
+This app is an educational research tool, not a diagnosis or clinical staging
+system. No real-data model has yet been trained or clinically validated here.
+
+## Tests
 
 ```powershell
-python ml\prepare_combined.py `
-  --pad-csv data\pad\metadata.csv `
-  --pad-images data\pad\images `
-  --isic-gt data\isic2019\ground_truth.csv `
-  --isic-images data\isic2019\images `
-  --isic-meta data\isic2019\metadata.csv
+.\.venv\Scripts\python -m unittest discover -s tests -v
 ```
 
-This creates:
+Regression tests use artificial images to check software behavior only.
 
-```text
-data/combined_manifest.csv
-```
+## Independent holdout and grouping
 
-Before training, the command prints counts by dataset source and class. Check those counts.
+Training now creates a fixed, source/class-stratified **train/validation/test**
+partition (approximately 60/20/20). Linked patient IDs, lesion IDs, image IDs,
+and exact-file SHA-256 duplicates stay in a single partition. Each partition must
+contain every source/class represented in the manifest; otherwise training fails
+with a diagnostic rather than silently reporting incomplete results.
 
-## 3. Train one combined model
+Supply `--isic-meta path/to/ISIC_2019_Training_Metadata.csv` to preparation to
+use authoritative ISIC lesion IDs and genuine patient IDs where available.
+The Kaggle notebook downloads the official metadata automatically. Dummy patient
+IDs are ignored. `split_summary.json` records grouping coverage; missing IDs remain
+explicit image-level groups. File hashes detect exact duplicates, not re-encoded
+or cropped copies. Lesion separation still does not prove patient separation.
 
-```powershell
-python ml\train.py --manifest data\combined_manifest.csv --epochs 20 --batch-size 16
-```
+The test partition is never used to select checkpoints. After training, the best
+validation checkpoint is loaded and test metrics are computed once. Outputs now
+also include `test_split.csv`, `split_summary.json`, and `test_metrics.json`.
+Overall and per-source test reports contain confusion matrices, per-class
+sensitivity/specificity, one-vs-rest ROC AUC (null when undefined), and calibration
+error. PAD-only test metrics are the relevant internal smartphone-photo measure.
+External smartphone performance remains unknown until separately evaluated.
 
-Output:
-
-```text
-models/skinsight_convnext_tiny.pt
-models/metrics.json
-```
-
-The checkpoint metadata records:
-
-```text
-dataset = PAD-UFES-20 + ISIC-2019
-architecture = convnext_tiny
-```
-
-## 4. Start the application
-
-```powershell
-python run.py
-```
-
-Open:
-
-```text
-http://127.0.0.1:8000
-```
-
-For another device on the same network:
-
-```powershell
-python run.py --host 0.0.0.0
-```
-
-Then use the computer's IPv4 address from `ipconfig`.
-
-## Why this is safer than simply combining folders
-
-PAD-UFES-20 clinical smartphone photographs and ISIC dermoscopy images have very different image styles. A model can learn those source differences instead of genuine disease features.
-
-This build reduces that risk by:
-1. preserving the source of every image,
-2. balancing source + class during sampling,
-3. using patient/group-aware train/validation splitting where patient IDs are available,
-4. preventing known groups from appearing in both training and validation,
-5. reporting validation balanced accuracy rather than plain accuracy only.
-
-For a research-grade final evaluation, we should additionally create:
-- a PAD-only holdout test set,
-- an ISIC-only holdout test set,
-- confusion matrices and per-class sensitivity/specificity,
-- external validation on images never used during development.
-
-## Medical limitation
-
-This project is a research/educational screening tool. A photo classifier cannot determine clinical Stage I, II, III, or IV skin cancer from an image alone.
-
-Staging can require pathology/biopsy, Breslow thickness or tumor depth, ulceration, lymph-node status, imaging, and evidence of distant spread.
-
-The application therefore provides lesion-class probabilities and next-step guidance without fabricating a clinical stage.
+Use a fresh output directory for another run. Reusing test feedback to tune a
+model contaminates the test set even when filenames are different. Existing
+checkpoints/test results will not be overwritten automatically.

@@ -4,18 +4,20 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from PIL import Image
 import io
+from pathlib import Path
 
 from .inference import Predictor
 from .guidance import GUIDANCE, stage_info
 
 app = FastAPI(
     title="SkinSight AI",
-    description="Educational skin-lesion screening using an own-trained ConvNeXt-Tiny model.",
+    description="Educational skin-lesion screening using an own-trained MobileNetV3-Small model.",
     version="0.1.0",
 )
 
-app.mount("/static", StaticFiles(directory="app/static"), name="static")
-templates = Jinja2Templates(directory="app/templates")
+APP_DIR = Path(__file__).resolve().parent
+app.mount("/static", StaticFiles(directory=str(APP_DIR / "static")), name="static")
+templates = Jinja2Templates(directory=str(APP_DIR / "templates"))
 predictor = Predictor()
 
 @app.get("/", response_class=HTMLResponse)
@@ -64,6 +66,6 @@ async def predict(image: UploadFile = File(...)):
     result["stage"] = stage_info(label)
     result["medical_disclaimer"] = (
         "This is an educational AI screening result, not a medical diagnosis. "
-        "A clinician must assess concerning lesions."
+        "Model scores are not calibrated probabilities of disease. A clinician must assess concerning lesions."
     )
     return JSONResponse(result)

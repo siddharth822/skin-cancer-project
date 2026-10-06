@@ -18,7 +18,7 @@
         <p class="eyebrow">SMARTPHONE SKIN-LESION SCREENING</p>
         <h1>Capture. Analyze. Understand the next step.</h1>
         <p class="lead">
-          A new own-trained ConvNeXt-based skin-lesion classifier designed around
+          A new own-trained MobileNetV3-based skin-lesion classifier designed around
           smartphone clinical images.
         </p>
         <div class="feature-row">
@@ -34,7 +34,7 @@
           <strong>{{ 'Model ready' if model_ready else 'Model not trained yet' }}</strong>
           <p>
             {% if model_ready %}
-              {{ model_meta.get('architecture', 'ConvNeXt-Tiny') }} · {{ model_meta.get('dataset', 'PAD-UFES-20') }}
+              {{ model_meta.get('architecture', 'MobileNetV3-Small') }} · {{ model_meta.get('dataset', 'PAD-UFES-20') }}
             {% else %}
               The website is ready. Train the model to enable predictions.
             {% endif %}
@@ -82,7 +82,7 @@
             </div>
             <div class="confidence">
               <span id="confidence">0%</span>
-              <small>confidence</small>
+              <small>model score</small>
             </div>
           </div>
 

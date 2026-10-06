@@ -1,39 +1,45 @@
 from pathlib import Path
 import io
+import os
 import numpy as np
 from PIL import Image
 import torch
-import timm
+from torchvision.models import mobilenet_v3_small
+from torch import nn
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 
-CHECKPOINT = Path("models/skinsight_convnext_tiny.pt")
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+CHECKPOINT = Path(os.environ.get("SKINSIGHT_MODEL_PATH", str(PROJECT_ROOT / "models/skinsight_mobilenetv3_small.pt")))
 
 class Predictor:
     def __init__(self):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model = None
         self.class_names = None
-        self.image_size = 224
+        self.image_size = 160
         self.meta = {}
         self._load()
 
     def _load(self):
         if not CHECKPOINT.exists():
             return
-        ckpt = torch.load(CHECKPOINT, map_location=self.device, weights_only=False)
+        ckpt = torch.load(CHECKPOINT, map_location=self.device, weights_only=True)
         self.class_names = ckpt["class_names"]
-        self.image_size = int(ckpt.get("image_size", 224))
+        self.image_size = int(ckpt.get("image_size", 160))
         self.meta = {
-            "architecture": ckpt.get("architecture", "convnext_tiny"),
+            "architecture": ckpt.get("architecture", "mobilenet_v3_small"),
             "dataset": ckpt.get("dataset", "PAD-UFES-20"),
             "balanced_accuracy": ckpt.get("balanced_accuracy"),
             "training_mode": ckpt.get("training_mode"),
         }
-        self.model = timm.create_model(
-            ckpt.get("architecture", "convnext_tiny"),
-            pretrained=False,
-            num_classes=len(self.class_names),
+        if self.meta["architecture"] != "mobilenet_v3_small":
+            raise ValueError("Expected a MobileNetV3-Small checkpoint produced by ml/train.py")
+        if set(self.class_names) != {"ACK", "BCC", "MEL", "NEV", "SCC", "SEK"} or len(self.class_names) != 6:
+            raise ValueError("Checkpoint must contain the six supported lesion classes")
+        self.model = mobilenet_v3_small(weights=None)
+        self.model.classifier[-1] = nn.Linear(
+            self.model.classifier[-1].in_features, len(self.class_names)
         )
         self.model.load_state_dict(ckpt["model_state"])
         self.model.to(self.device).eval()

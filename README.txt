@@ -1,10 +1,4 @@
-Replace:
-ml\model.py
-ml\train.py
-app\inference.py
-
-Then run:
-python ml\train.py --manifest "D:\SkinCancerData\combined\combined_manifest.csv" --epochs 3 --batch-size 16 --workers 0 --output-dir "D:\SkinCancerData\models"
-
-After training:
-python run.py
+The canonical application and training code is in SkinSight_AI.
+See SkinSight_AI/README.md for installation, dataset preparation, and model loading.
+Import SkinSight_AI/notebooks/train_kaggle.ipynb into Kaggle for the GPU workflow.
+Root-level training/preparation scripts delegate to the canonical scripts.

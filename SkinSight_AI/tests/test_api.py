@@ -1,0 +1,77 @@
+"""Run the actual HTTP API with a temporary artificial checkpoint."""
+import io
+import json
+import os
+import socket
+import sys
+import tempfile
+import threading
+import time
+import unittest
+import urllib.error
+import urllib.request
+from pathlib import Path
+from unittest.mock import patch
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'ml'))
+os.environ['NO_ALBUMENTATIONS_UPDATE'] = '1'
+import torch
+import uvicorn
+from PIL import Image
+from model import create_model, CLASS_NAMES
+from app import inference, main
+
+class APITests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        torch.set_num_threads(2)
+        cls.temp = tempfile.TemporaryDirectory()
+        checkpoint=Path(cls.temp.name)/'test.pt'
+        torch.save(dict(model_state=create_model(pretrained=False).state_dict(),
+                        class_names=CLASS_NAMES,architecture='mobilenet_v3_small',image_size=64),checkpoint)
+        with patch.object(inference,'CHECKPOINT',checkpoint):
+            predictor=inference.Predictor()
+        cls.predictor_patch=patch.object(main,'predictor',predictor);cls.predictor_patch.start()
+        cls.sock=socket.socket();cls.sock.bind(('127.0.0.1',0))
+        cls.url=f'http://127.0.0.1:{cls.sock.getsockname()[1]}'
+        cls.server=uvicorn.Server(uvicorn.Config(main.app,log_level='error'))
+        cls.thread=threading.Thread(target=cls.server.run,kwargs={'sockets':[cls.sock]},daemon=True)
+        cls.thread.start()
+        for _ in range(100):
+            if cls.server.started: break
+            time.sleep(.02)
+        if not cls.server.started: raise RuntimeError('API did not start')
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.server.should_exit=True;cls.thread.join(timeout=5)
+        cls.sock.close();cls.predictor_patch.stop();cls.temp.cleanup()
+
+    def upload(self,raw,content_type='image/png'):
+        boundary='skinsighttest'
+        body=(f'--{boundary}\r\nContent-Disposition: form-data; name="image"; filename="image.png"\r\nContent-Type: {content_type}\r\n\r\n').encode()+raw+f'\r\n--{boundary}--\r\n'.encode()
+        return urllib.request.urlopen(urllib.request.Request(self.url+'/api/predict',data=body,headers={'Content-Type':f'multipart/form-data; boundary={boundary}'}))
+
+    def test_prediction_and_html(self):
+        with urllib.request.urlopen(self.url+'/') as response:
+            self.assertIn(b'MobileNet',response.read())
+        with urllib.request.urlopen(self.url+'/api/health') as response:
+            self.assertTrue(json.load(response)['model_ready'])
+        raw=io.BytesIO();Image.new('RGB',(64,64),'brown').save(raw,format='PNG')
+        with self.upload(raw.getvalue()) as response:
+            result=json.load(response)
+            self.assertIn(result['label'],CLASS_NAMES)
+            self.assertIn('guidance',result)
+            self.assertIn('stage',result)
+            self.assertIn('not a medical diagnosis',result['medical_disclaimer'])
+
+    def test_invalid_image_rejected(self):
+        with self.assertRaises(urllib.error.HTTPError) as error: self.upload(b'invalid')
+        self.assertEqual(error.exception.code,400)
+
+    def test_untrained_model_returns_503(self):
+        with patch.object(main.predictor,'model',None):
+            with self.assertRaises(urllib.error.HTTPError) as error: self.upload(b'invalid')
+        self.assertEqual(error.exception.code,503)
+
+if __name__ == '__main__': unittest.main()
