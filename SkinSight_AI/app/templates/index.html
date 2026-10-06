@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SkinSight AI</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">SkinSight <span>AI</span></div>
+    <div class="badge">Research / Educational Prototype</div>
+  </header>
+
+  <main class="page">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">SMARTPHONE SKIN-LESION SCREENING</p>
+        <h1>Capture. Analyze. Understand the next step.</h1>
+        <p class="lead">
+          A new own-trained ConvNeXt-based skin-lesion classifier designed around
+          smartphone clinical images.
+        </p>
+        <div class="feature-row">
+          <span>📷 Mobile camera</span>
+          <span>🧠 Own-trained model</span>
+          <span>🩺 Doctor guidance</span>
+          <span>🔬 Stage-safe explanation</span>
+        </div>
+      </div>
+      <div class="status-card">
+        <div class="status-dot {{ 'ready' if model_ready else 'not-ready' }}"></div>
+        <div>
+          <strong>{{ 'Model ready' if model_ready else 'Model not trained yet' }}</strong>
+          <p>
+            {% if model_ready %}
+              {{ model_meta.get('architecture', 'ConvNeXt-Tiny') }} · {{ model_meta.get('dataset', 'PAD-UFES-20') }}
+            {% else %}
+              The website is ready. Train the model to enable predictions.
+            {% endif %}
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="card capture-card">
+        <h2>1. Take or upload a skin photo</h2>
+        <p class="muted">Use natural light, keep the lesion in focus, and avoid heavy filters.</p>
+
+        <div id="dropzone" class="dropzone">
+          <img id="preview" alt="Selected skin image preview" hidden>
+          <div id="placeholder">
+            <div class="camera-icon">📷</div>
+            <p>Select an image or use your phone camera</p>
+          </div>
+        </div>
+
+        <input id="fileInput" type="file" accept="image/*" capture="environment" hidden>
+
+        <div class="actions">
+          <button id="chooseBtn" class="btn primary">Take Photo / Choose Image</button>
+          <button id="analyzeBtn" class="btn secondary" disabled>Analyze Image</button>
+        </div>
+
+        <p id="fileName" class="small muted"></p>
+        <p id="error" class="error" hidden></p>
+      </div>
+
+      <div class="card result-card">
+        <h2>2. AI screening result</h2>
+        <div id="emptyResult" class="empty-state">
+          <div class="pulse-orb"></div>
+          <p>Your analysis will appear here.</p>
+        </div>
+
+        <div id="result" hidden>
+          <div class="result-heading">
+            <div>
+              <p class="eyebrow">TOP CLASS</p>
+              <h3 id="diagnosis">—</h3>
+            </div>
+            <div class="confidence">
+              <span id="confidence">0%</span>
+              <small>confidence</small>
+            </div>
+          </div>
+
+          <div id="probabilities" class="probabilities"></div>
+
+          <div class="info-box">
+            <strong id="risk">—</strong>
+            <p id="message"></p>
+          </div>
+
+          <div class="info-box doctor">
+            <strong>Doctor recommendation</strong>
+            <p id="doctorText"></p>
+          </div>
+
+          <div class="info-box stage">
+            <strong>Stage information</strong>
+            <p><b id="stageStatus"></b></p>
+            <p id="stageText"></p>
+          </div>
+
+          <p class="disclaimer" id="disclaimer"></p>
+        </div>
+      </div>
+    </section>
+
+    <section class="safety">
+      <h2>What this project does — and does not do</h2>
+      <div class="safety-grid">
+        <div><b>✓</b><span>Classifies six PAD-UFES-20 lesion categories.</span></div>
+        <div><b>✓</b><span>Works with uploaded or mobile-camera photos.</span></div>
+        <div><b>✓</b><span>Shows probabilities and next-step guidance.</span></div>
+        <div><b>✕</b><span>Does not claim a biopsy diagnosis.</span></div>
+        <div><b>✕</b><span>Does not invent Stage I–IV from a photograph.</span></div>
+        <div><b>✓</b><span>Explains when professional assessment is needed.</span></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

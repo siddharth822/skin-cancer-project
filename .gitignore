@@ -1,0 +1,30 @@
+﻿# Local environments and generated files
+.venv/
+venv/
+node_modules/
+__pycache__/
+*.pyc
+build/
+dist/
+
+# Credentials
+.env
+.env.*
+!.env.example
+kaggle.json
+*credentials*
+*secret*
+*.pem
+*.key
+
+# Datasets, model weights, and archives
+data/
+datasets/
+*.zip
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.h5
+*.hdf5
+*.keras
