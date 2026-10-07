@@ -52,6 +52,9 @@ class ReportTests(unittest.TestCase):
             self.assertTrue(smtp.call_args.kwargs['context'].check_hostname)
         with patch.dict(os.environ,env),patch.object(reporting.smtplib,'SMTP_SSL',side_effect=OSError('offline')):
             self.assertEqual(reporting.send_mail('owner@example.com','Report','test'),'failed')
+        with patch.dict(os.environ,env),patch.object(reporting.smtplib,'SMTP_SSL',side_effect=reporting.smtplib.SMTPAuthenticationError(535,b'test error')):
+            self.assertEqual(reporting.send_mail('owner@example.com','Report','test'),'auth_failed')
+            self.assertIn('App Password',reporting.delivery_message('auth_failed'))
         with patch.dict(os.environ,{},clear=True):self.assertEqual(reporting.send_mail('owner@example.com','Report','test'),'not_configured')
 
     def test_migrates_existing_account_database(self):

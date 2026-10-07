@@ -31,6 +31,14 @@ def send_mail(recipient, subject, body, attachment=None):
             server.login(os.environ['SKINSIGHT_SMTP_USER'],os.environ['SKINSIGHT_SMTP_PASSWORD'])
             refused=server.send_message(message)
         return 'failed' if refused else 'accepted'
+    except smtplib.SMTPAuthenticationError:
+        return 'auth_failed'
+    except smtplib.SMTPRecipientsRefused:
+        return 'recipient_refused'
+    except smtplib.SMTPSenderRefused:
+        return 'sender_refused'
+    except ssl.SSLError:
+        return 'tls_failed'
     except (OSError,smtplib.SMTPException,ValueError):
         return 'failed'
 
@@ -93,3 +101,14 @@ def deliver_report(username,report_id):
     if not user or not user['email'] or not user['email_verified']:status='verification_required'
     else:status=send_mail(user['email'],'Your SkinSight screening report',report_text(result),make_pdf(report_text(result)))
     with auth.connect() as db:db.execute('UPDATE reports SET email_status=? WHERE id=? AND username=?',(status,report_id,username))
+
+
+def delivery_message(status):
+    return {
+        'auth_failed': 'Gmail rejected the sender login. Restart start_with_gmail.bat and enter the Gmail address that created the App Password, followed by that 16-character App Password (not your normal password).',
+        'recipient_refused': 'Gmail rejected the recipient address. Check the Report email address.',
+        'sender_refused': 'Gmail rejected the sender address. Use the same Gmail address for sender and login.',
+        'tls_failed': 'The secure Gmail connection failed. Check your computer date/time and network; TLS verification remains enabled.',
+        'not_configured': 'Gmail sending is not configured. Start the app with start_with_gmail.bat.',
+        'failed': 'Could not send through Gmail. Check internet access and whether the network permits smtp.gmail.com on port 465, then try again.',
+    }.get(status, 'Unable to send the email. Your report can still be downloaded.')

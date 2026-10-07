@@ -108,7 +108,7 @@ function showError(msg) {
 
 
 async function watchEmail(url, version) {
-  const messages = {accepted: "Gmail accepted your report email. Check your inbox and spam folder.", failed: "Email could not be sent. Download your report here; check the sending Gmail configuration.", not_configured: "Email sending is not configured. Your PDF report is available to download.", verification_required: "Verify your email in Email settings to receive future reports automatically."};
+  const messages = {auth_failed: "Gmail rejected the sender login. Restart start_with_gmail.bat with the sender Gmail address and its Google App Password.", recipient_refused: "Check your recipient email address in Email settings.", sender_refused: "Gmail rejected the sending address. Check the sender configuration.", tls_failed: "Secure Gmail connection failed. Check computer date/time and network.", accepted: "Gmail accepted your report email. Check your inbox and spam folder.", failed: "Email could not be sent. Download your report here; check the sending Gmail configuration.", not_configured: "Email sending is not configured. Your PDF report is available to download.", verification_required: "Verify your email in Email settings to receive future reports automatically."};
   for (let attempt = 0; attempt < 25; attempt++) {
     if (version !== imageVersion) return;
     try {

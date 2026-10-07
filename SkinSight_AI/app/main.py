@@ -178,7 +178,7 @@ def send_code(request: Request,csrf: str=Form(...),user: str=Depends(auth.requir
     try:code=auth.verification_code(user)
     except ValueError as exc:return account_page(request,user,str(exc))
     status=reporting.send_mail(profile['email'],'Verify your SkinSight email','Your verification code is '+code+'. It expires in 10 minutes. If you did not request this, ignore this email.')
-    return account_page(request,user,'Verification email accepted by Gmail. Check your inbox and spam folder.' if status=='accepted' else 'Unable to send the code. Check Gmail setup and try again later.')
+    return account_page(request,user,'Verification email accepted by Gmail. Check your inbox and spam folder.' if status=='accepted' else reporting.delivery_message(status))
 
 
 @app.post('/account/verify')
