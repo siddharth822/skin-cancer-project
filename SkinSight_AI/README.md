@@ -172,7 +172,7 @@ Cancer stage information is educational. The app never assigns a clinical stage 
 Every successful analysis creates an account-owned PDF screening report with model scores, doctor guidance and stage limitations. Choose **Download PDF report** below the result. Registered email addresses receive reports directly, without verification codes. Report summaries remain private to the owning account; uploaded images are not attached. Rejected images create no report or email.
 
 1. Enable Google 2-Step Verification for the sender Gmail account and create a Google App Password: https://support.google.com/accounts/answer/185833.
-2. Stop any running app with Ctrl+C, then double-click **start_with_gmail.bat**. Enter the sender Gmail address and its App Password at the masked local prompt. The password stays in the process environment for that run, not a saved file.
+2. Stop any running app with Ctrl+C, then double-click **start_with_gmail.bat**. Enter the sender Gmail address and its App Password at the masked local prompt. This is a one-time setup: the launcher saves a Windows DPAPI-encrypted credential at `data/gmail-credentials.clixml`, readable only by the same Windows user on the same computer. Future starts load it automatically. To change credentials, stop the app, delete that file and restart. Never share the data folder.
 3. Register with your report email and log in using username or email. Existing users can add or change their recipient address under **Email settings**. No verification step is required.
 4. Analyze a skin photo. The app sends the PDF and doctor guidance directly to the account email, then displays the sending status. Downloads still work if sending fails.
 
