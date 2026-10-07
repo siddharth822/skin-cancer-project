@@ -51,6 +51,7 @@ analyzeBtn.addEventListener("click", async () => {
     if (version !== imageVersion) return;
     if (!res.ok) throw new Error(data.detail || "Analysis failed.");
     renderResult(data);
+    watchEmail(data.email_status_url, version);
   } catch (e) {
     if (version === imageVersion) showError(e.message);
   } finally {
@@ -60,6 +61,8 @@ analyzeBtn.addEventListener("click", async () => {
 });
 
 function renderResult(data) {
+  document.getElementById("downloadReport").href = data.report_url;
+  document.getElementById("emailStatus").textContent = "Preparing email…";
   document.getElementById("emptyResult").hidden = true;
   document.getElementById("result").hidden = false;
 
@@ -101,4 +104,27 @@ function showError(msg) {
   clearResult();
   error.textContent = msg;
   error.hidden = false;
+}
+
+
+async function watchEmail(url, version) {
+  const messages = {accepted: "Gmail accepted your report email. Check your inbox and spam folder.", failed: "Email could not be sent. Download your report here; check the sending Gmail configuration.", not_configured: "Email sending is not configured. Your PDF report is available to download.", verification_required: "Verify your email in Email settings to receive future reports automatically."};
+  for (let attempt = 0; attempt < 25; attempt++) {
+    if (version !== imageVersion) return;
+    try {
+      const response = await fetch(url, {cache: "no-store"});
+      if (!response.ok) throw new Error();
+      const data = await response.json();
+      if (version !== imageVersion) return;
+      if (data.email_status !== "pending") {
+        document.getElementById("emailStatus").textContent = messages[data.email_status] || "Download your report here.";
+        return;
+      }
+    } catch (_) {
+      if (version === imageVersion) document.getElementById("emailStatus").textContent = "Email status unavailable. Your report can still be downloaded.";
+      return;
+    }
+    await new Promise(resolve => setTimeout(resolve, 1000));
+  }
+  if (version === imageVersion) document.getElementById("emailStatus").textContent = "Email is still processing. Your report is available to download.";
 }

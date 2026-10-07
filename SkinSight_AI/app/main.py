@@ -1,5 +1,5 @@
-from fastapi import FastAPI, File, HTTPException, Request, UploadFile, Form, Depends
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi import FastAPI, File, HTTPException, Request, UploadFile, Form, Depends, BackgroundTasks
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from PIL import Image
@@ -8,7 +8,7 @@ from pathlib import Path
 
 from .inference import Predictor
 from .image_quality import validate_photo
-from . import auth
+from . import auth, reporting
 import secrets
 from .guidance import GUIDANCE, stage_info
 
@@ -31,7 +31,7 @@ def home(request: Request):
     csrf = request.cookies.get("skinsight_csrf") or secrets.token_urlsafe(32)
     response = templates.TemplateResponse(
         "index.html",
-        {"request": request, "model_ready": predictor.ready, "model_meta": predictor.meta, "username": user, "csrf": csrf},
+        {"request": request, "model_ready": predictor.ready, "model_meta": predictor.meta, "username": user, "csrf": csrf, "email_profile": auth.email_profile(user)},
     )
 
     response.set_cookie("skinsight_csrf", csrf, httponly=True, secure=auth.SECURE_COOKIE, samesite="strict")
@@ -54,10 +54,10 @@ def register_page(request: Request):
     return auth_page(request, register=True)
 
 @app.post("/register")
-def register_account(request: Request, username: str = Form(...), password: str = Form(...), csrf: str = Form(...)):
+def register_account(request: Request, username: str = Form(...), password: str = Form(...), csrf: str = Form(...), email: str = Form(...)):
     auth.check_csrf(request, csrf)
     try:
-        auth.register(username, password)
+        auth.register(username, password, email)
     except ValueError as exc:
         return auth_page(request, register=True, error=str(exc), status=400)
     return RedirectResponse("/login", status_code=303)
@@ -90,7 +90,7 @@ def health():
     }
 
 @app.post("/api/predict")
-async def predict(request: Request, image: UploadFile = File(...), user: str = Depends(auth.require_user)):
+async def predict(request: Request, background_tasks: BackgroundTasks, image: UploadFile = File(...), user: str = Depends(auth.require_user)):
     auth.check_csrf(request, request.headers.get("X-CSRF-Token"))
     if not predictor.ready:
         raise HTTPException(
@@ -128,4 +128,62 @@ async def predict(request: Request, image: UploadFile = File(...), user: str = D
         "This is an educational AI screening result, not a medical diagnosis. "
         "Model scores are not calibrated probabilities of disease. A clinician must assess concerning lesions."
     )
-    return JSONResponse(result)
+    report_id=reporting.save_report(user,result)
+    result["report_url"] = f"/api/reports/{report_id}/download"
+    result["email_status_url"] = f"/api/reports/{report_id}/status"
+    result["email_status"] = "pending"
+    background_tasks.add_task(reporting.deliver_report,user,report_id)
+    return JSONResponse(result,headers={"Cache-Control":"no-store"})
+
+
+@app.get('/api/reports/{report_id}/download')
+def download_report(report_id: str, user: str = Depends(auth.require_user)):
+    result=reporting.get_report(user,report_id)
+    if result is None:raise HTTPException(status_code=404,detail='Report not found.')
+    return Response(reporting.make_pdf(reporting.report_text(result)),media_type='application/pdf',headers={'Content-Disposition':'attachment; filename="skinsight-screening-report.pdf"','Cache-Control':'no-store'})
+
+
+@app.get('/api/reports/{report_id}/status')
+def report_status(report_id: str, user: str = Depends(auth.require_user)):
+    result=reporting.get_report(user,report_id)
+    if result is None:raise HTTPException(status_code=404,detail='Report not found.')
+    return JSONResponse({'email_status':result['email_status']},headers={'Cache-Control':'no-store'})
+
+
+def account_page(request,user,message=None):
+    response=templates.TemplateResponse('account.html',{'request':request,'profile':auth.email_profile(user),'csrf':request.cookies.get('skinsight_csrf'),'message':message,'mail_ready':reporting.smtp_ready()})
+    response.headers['Cache-Control']='no-store'
+    return response
+
+
+@app.get('/account',response_class=HTMLResponse)
+def account(request: Request,user: str = Depends(auth.require_user)):
+    return account_page(request,user)
+
+
+@app.post('/account/email')
+def account_email(request: Request,email: str=Form(...),csrf: str=Form(...),user: str=Depends(auth.require_user)):
+    auth.check_csrf(request,csrf)
+    try:auth.set_email(user,email);message='Email saved. Verify it below to receive reports.'
+    except ValueError as exc:message=str(exc)
+    return account_page(request,user,message)
+
+
+@app.post('/account/send-code')
+def send_code(request: Request,csrf: str=Form(...),user: str=Depends(auth.require_user)):
+    auth.check_csrf(request,csrf)
+    profile=auth.email_profile(user)
+    if not reporting.smtp_ready():return account_page(request,user,'Gmail sending is not configured on this server yet. Report downloads still work.')
+    if not profile['email']:return account_page(request,user,'Save an email address first.')
+    try:code=auth.verification_code(user)
+    except ValueError as exc:return account_page(request,user,str(exc))
+    status=reporting.send_mail(profile['email'],'Verify your SkinSight email','Your verification code is '+code+'. It expires in 10 minutes. If you did not request this, ignore this email.')
+    return account_page(request,user,'Verification email accepted by Gmail. Check your inbox and spam folder.' if status=='accepted' else 'Unable to send the code. Check Gmail setup and try again later.')
+
+
+@app.post('/account/verify')
+def verify_account_email(request: Request,code: str=Form(...),csrf: str=Form(...),user: str=Depends(auth.require_user)):
+    auth.check_csrf(request,csrf)
+    try:auth.verify_email(user,code);message='Email verified. Future screening reports will be emailed automatically.'
+    except ValueError as exc:message=str(exc)
+    return account_page(request,user,message)

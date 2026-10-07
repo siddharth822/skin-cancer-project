@@ -49,7 +49,7 @@ class APITests(unittest.TestCase):
         cls.opener=urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
         html=cls.opener.open(cls.url+'/register').read().decode()
         cls.csrf=re.search(r'name="csrf" value="([^"]+)"',html).group(1)
-        form=urllib.parse.urlencode(dict(username='testuser',password='unique-test-password',csrf=cls.csrf)).encode()
+        form=urllib.parse.urlencode(dict(username='testuser',password='unique-test-password',email='testuser@example.com',csrf=cls.csrf)).encode()
         cls.opener.open(cls.url+'/register',form).close()
         cls.opener.open(cls.url+'/login',form).close()
 
@@ -75,6 +75,14 @@ class APITests(unittest.TestCase):
             self.assertIn('guidance',result)
             self.assertIn('stage',result)
             self.assertIn('not a medical diagnosis',result['medical_disclaimer'])
+        with self.opener.open(self.url+result['report_url']) as response:
+            self.assertEqual(response.headers['Content-Type'],'application/pdf')
+            self.assertTrue(response.read().startswith(b'%PDF-1.4'))
+        with self.assertRaises(urllib.error.HTTPError) as error:
+            urllib.request.urlopen(self.url+result['report_url'])
+        self.assertEqual(error.exception.code,401)
+        with self.opener.open(self.url+result['email_status_url']) as response:
+            self.assertEqual(json.load(response)['email_status'],'verification_required')
 
     def test_avatar_rejected_before_inference(self):
         from PIL import ImageDraw

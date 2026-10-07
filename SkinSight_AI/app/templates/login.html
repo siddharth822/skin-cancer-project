@@ -5,7 +5,8 @@
 {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
 <form method="post" action="{{ '/register' if register else '/login' }}">
 <input type="hidden" name="csrf" value="{{ csrf }}">
-<label for="username">Username</label><input id="username" name="username" required minlength="3" maxlength="32" pattern="[a-zA-Z0-9_]+" autocomplete="username" class="auth-input">
+<label for="username">{{ "Username" if register else "Username or email" }}</label><input id="username" name="username" required minlength="3" maxlength="{{ 32 if register else 254 }}" {% if register %}pattern="[a-zA-Z0-9_]+"{% endif %} autocomplete="username" class="auth-input">
+{% if register %}<label for="email">Email for screening reports</label><input class="auth-input" id="email" name="email" type="email" maxlength="254" required autocomplete="email"><p class="small muted">After logging in, verify this address in Email settings. Successful analyses will email your screening report and doctor guidance.</p>{% endif %}
 <label for="password">Password</label><input id="password" name="password" type="password" required minlength="{{ 12 if register else 1 }}" maxlength="128" autocomplete="{{ 'new-password' if register else 'current-password' }}" class="auth-input">
 {% if register %}<p class="small muted">Use 12 or more characters. Choose a unique password.</p>{% endif %}
 <button class="btn primary" type="submit">{{ 'Create account' if register else 'Log in' }}</button></form>

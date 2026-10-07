@@ -161,8 +161,23 @@ The API rejects tiny images, blank/extremely exposed images, grayscale inputs an
 
 ## Accounts and login
 
-On Windows, double-click `start_windows.bat` from the extracted app folder, or use the existing PowerShell setup commands. Open the local app, choose **Create an account**, register a username and a password of at least 12 characters, then log in. Logout revokes the session. Accounts persist in `data/accounts.sqlite3` on the machine hosting this app; separate computers have separate accounts. Keep this database private and outside shared ZIPs/Git. Uploaded photos are processed in memory and are not saved as account history.
+On Windows, double-click `start_windows.bat` from the extracted app folder, or use the existing PowerShell setup commands. Open the local app, choose **Create an account**, register a username and a password of at least 12 characters, then log in. Logout revokes the session. Accounts persist in `data/accounts.sqlite3` on the machine hosting this app; separate computers have separate accounts. Keep this database private and outside shared ZIPs/Git. Uploaded photos are processed in memory; screening report summaries are saved privately for downloads.
 
-Passwords use salted PBKDF2-SHA256 hashes; sessions are random server-side records with an eight-hour expiry. Login attempts are rate limited, and POST operations require CSRF tokens. This is a local demo, without email verification or password recovery. For HTTPS hosting set `SKINSIGHT_SECURE_COOKIES=1`; internet deployment requires its own operational review. The health endpoint is public, but the screening page and prediction API require login.
+Passwords use salted PBKDF2-SHA256 hashes; sessions are random server-side records with an eight-hour expiry. Login attempts are rate limited, and POST operations require CSRF tokens. This is a local demo with verification of report email addresses and no password recovery. For HTTPS hosting set `SKINSIGHT_SECURE_COOKIES=1`; internet deployment requires its own operational review. The health endpoint is public, but the screening page and prediction API require login.
 
 Cancer stage information is educational. The app never assigns a clinical stage from an image. For melanoma it explains stages 0–IV; for BCC/SCC it explains the different assessment requirements. Stage determination needs confirmed diagnosis and clinical/pathology findings.
+
+## Download reports and email through Gmail
+
+Every successful analysis creates an account-owned PDF screening report, with the image-model result, class scores, doctor guidance and stage limitations. Choose **Download PDF report** below the result. The PDF and email do not attach your uploaded image. Report summaries persist privately in the account database; other accounts cannot download them. Rejected images create no report and send no report email.
+
+To enable sending on your Windows computer:
+
+1. Use a Gmail account as the application's sender. Enable Google 2-Step Verification, then create an **App Password**: https://support.google.com/accounts/answer/185833. Some organizational/managed accounts may not offer App Passwords. Never use or share your normal Gmail password.
+2. Stop an existing app with Ctrl+C. Double-click **start_with_gmail.bat**. Enter the sender Gmail address and its App Password at the masked local prompt. The launcher keeps the password only in the process environment for this run, not in a saved file. Gmail setup must be supplied again when restarting this launcher.
+3. Register with your report email, then log in (username or email). Open **Email settings → Send verification code**, check your Gmail inbox/spam, and enter the code. Existing accounts can save an email there without re-registering.
+4. Once verified, every successful future analysis automatically emails the screening report PDF and doctor guidance. Check the email status shown below the result. Downloading works even if sending fails.
+
+Server configuration uses `SKINSIGHT_SMTP_HOST=smtp.gmail.com`, `SKINSIGHT_SMTP_PORT=465`, `SKINSIGHT_SMTP_USER`, `SKINSIGHT_SMTP_PASSWORD` (App Password), and `SKINSIGHT_MAIL_FROM`. SMTP uses verified TLS; plain SMTP is never used for credentials. Provider acceptance does not guarantee inbox delivery. Email sending is best effort, not a durable queue; restarting during delivery can interrupt it. No real Gmail delivery has been tested without configured credentials. Codes expire in ten minutes, permit five guesses, and sending codes is limited to once per minute per account.
+
+The sending account is separate from each user's recipient email. Keep local databases, reports and sender credentials private. Shared ZIPs contain none of those. This is educational screening, not diagnosis, prescribed treatment or clinical staging.

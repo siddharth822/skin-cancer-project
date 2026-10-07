@@ -10,7 +10,7 @@
 <body>
   <header class="topbar">
     <div class="brand">SkinSight <span>AI</span></div>
-    <div class="badge">{{ username }}</div>
+    <div class="badge">{{ username }}</div><a href="/account">Email settings</a>
     <form method="post" action="/logout"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn secondary" type="submit">Log out</button></form>
   </header>
 
@@ -89,6 +89,7 @@
           </div>
 
           <div id="probabilities" class="probabilities"></div>
+          <div class="info-box"><a id="downloadReport" class="btn primary" href="#">Download PDF report</a><p id="emailStatus" aria-live="polite"></p></div>
 
           <div class="info-box">
             <strong id="risk">—</strong>
