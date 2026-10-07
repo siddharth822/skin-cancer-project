@@ -129,22 +129,3 @@ def set_email(username,email):
         with connect() as db:
             db.execute('UPDATE users SET email=?,email_verified=0,verification_hash=NULL,verification_expires=NULL,verification_attempts=0 WHERE username=?',(email,username))
     except sqlite3.IntegrityError:raise ValueError('That email is already registered.')
-
-
-def verification_code(username):
-    with connect() as db:
-        row=db.execute('SELECT verification_expires FROM users WHERE username=?',(username,)).fetchone()
-        if row['verification_expires'] and row['verification_expires']-time.time()>540:
-            raise ValueError('Wait one minute before requesting another code.')
-        code=f'{secrets.randbelow(1000000):06d}'
-        db.execute('UPDATE users SET verification_hash=?,verification_expires=?,verification_attempts=0 WHERE username=?',(hashlib.sha256(code.encode()).hexdigest(),time.time()+600,username))
-    return code
-
-
-def verify_email(username,code):
-    with connect() as db:
-        row=db.execute('SELECT * FROM users WHERE username=?',(username,)).fetchone()
-        valid=(row['verification_hash'] and row['verification_expires']>time.time() and row['verification_attempts']<5 and hmac.compare_digest(row['verification_hash'],hashlib.sha256(code.strip().encode()).hexdigest()))
-        if valid:db.execute('UPDATE users SET email_verified=1,verification_hash=NULL,verification_expires=NULL WHERE username=?',(username,))
-        else:db.execute('UPDATE users SET verification_attempts=verification_attempts+1 WHERE username=?',(username,))
-    if not valid:raise ValueError('Code is incorrect or expired. Request a new code.')

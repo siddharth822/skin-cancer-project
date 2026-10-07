@@ -9,7 +9,7 @@ try {
     $env:SKINSIGHT_SMTP_USER = $gmailSender
     $env:SKINSIGHT_MAIL_FROM = $gmailSender
     $env:SKINSIGHT_SMTP_PASSWORD = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($gmailPointer).Replace(' ', '')
-    Write-Host 'Open http://127.0.0.1:8000. Register, log in, then verify your email in Email settings.'
+    Write-Host 'Open http://127.0.0.1:8000. Register with your report email, then log in. Reports will be emailed directly after analysis.'
     & '.\.venv\Scripts\python.exe' run.py
 } finally {
     [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($gmailPointer)

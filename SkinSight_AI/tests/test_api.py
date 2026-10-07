@@ -82,7 +82,7 @@ class APITests(unittest.TestCase):
             urllib.request.urlopen(self.url+result['report_url'])
         self.assertEqual(error.exception.code,401)
         with self.opener.open(self.url+result['email_status_url']) as response:
-            self.assertEqual(json.load(response)['email_status'],'verification_required')
+            self.assertEqual(json.load(response)['email_status'],'not_configured')
 
     def test_avatar_rejected_before_inference(self):
         from PIL import ImageDraw

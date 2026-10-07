@@ -1,4 +1,4 @@
-"""Owner-only screening reports and TLS SMTP delivery."""
+"""Owner-only screening reports and direct TLS SMTP delivery."""
 import json
 import os
 import secrets
@@ -97,8 +97,8 @@ def get_report(username,report_id):
 
 def deliver_report(username,report_id):
     result=get_report(username,report_id)
-    with auth.connect() as db:user=db.execute('SELECT email,email_verified FROM users WHERE username=?',(username,)).fetchone()
-    if not user or not user['email'] or not user['email_verified']:status='verification_required'
+    with auth.connect() as db:user=db.execute('SELECT email FROM users WHERE username=?',(username,)).fetchone()
+    if not user or not user['email']:status='email_required'
     else:status=send_mail(user['email'],'Your SkinSight screening report',report_text(result),make_pdf(report_text(result)))
     with auth.connect() as db:db.execute('UPDATE reports SET email_status=? WHERE id=? AND username=?',(status,report_id,username))
 

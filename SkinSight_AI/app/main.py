@@ -164,26 +164,6 @@ def account(request: Request,user: str = Depends(auth.require_user)):
 @app.post('/account/email')
 def account_email(request: Request,email: str=Form(...),csrf: str=Form(...),user: str=Depends(auth.require_user)):
     auth.check_csrf(request,csrf)
-    try:auth.set_email(user,email);message='Email saved. Verify it below to receive reports.'
-    except ValueError as exc:message=str(exc)
-    return account_page(request,user,message)
-
-
-@app.post('/account/send-code')
-def send_code(request: Request,csrf: str=Form(...),user: str=Depends(auth.require_user)):
-    auth.check_csrf(request,csrf)
-    profile=auth.email_profile(user)
-    if not reporting.smtp_ready():return account_page(request,user,'Gmail sending is not configured on this server yet. Report downloads still work.')
-    if not profile['email']:return account_page(request,user,'Save an email address first.')
-    try:code=auth.verification_code(user)
-    except ValueError as exc:return account_page(request,user,str(exc))
-    status=reporting.send_mail(profile['email'],'Verify your SkinSight email','Your verification code is '+code+'. It expires in 10 minutes. If you did not request this, ignore this email.')
-    return account_page(request,user,'Verification email accepted by Gmail. Check your inbox and spam folder.' if status=='accepted' else reporting.delivery_message(status))
-
-
-@app.post('/account/verify')
-def verify_account_email(request: Request,code: str=Form(...),csrf: str=Form(...),user: str=Depends(auth.require_user)):
-    auth.check_csrf(request,csrf)
-    try:auth.verify_email(user,code);message='Email verified. Future screening reports will be emailed automatically.'
+    try:auth.set_email(user,email);message='Email saved. Future screening reports will be sent directly to this address.'
     except ValueError as exc:message=str(exc)
     return account_page(request,user,message)

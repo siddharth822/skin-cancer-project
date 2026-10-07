@@ -16,29 +16,26 @@ class ReportTests(unittest.TestCase):
         self.result={'label':'MEL','confidence':80.,'top_predictions':[{'label':'MEL','probability':80.}], 'guidance':GUIDANCE['MEL'],'stage':stage_info('MEL'),'medical_disclaimer':'Educational screening, not a medical diagnosis.'}
     def tearDown(self):self.dbpatch.stop();self.temp.cleanup()
 
-    def test_private_pdf_and_delivery_requires_verified_recipient(self):
+    def test_private_pdf_and_direct_delivery_to_registered_email(self):
         report_id=reporting.save_report('owner',self.result)
         self.assertIsNone(reporting.get_report('other',report_id))
         data=reporting.get_report('owner',report_id);pdf=reporting.make_pdf(reporting.report_text(data))
         self.assertTrue(pdf.startswith(b'%PDF-1.4'));self.assertIn(b'Doctor guidance',pdf);self.assertIn(b'Not determinable',pdf)
-        with patch.object(reporting,'send_mail') as sender:
-            reporting.deliver_report('owner',report_id);sender.assert_not_called()
-        self.assertEqual(reporting.get_report('owner',report_id)['email_status'],'verification_required')
-        code=auth.verification_code('owner');auth.verify_email('owner',code)
         with patch.object(reporting,'send_mail',return_value='accepted') as sender:
             reporting.deliver_report('owner',report_id)
             args=sender.call_args.args;self.assertEqual(args[0],'owner@example.com');self.assertIn('dermatologist',args[2]);self.assertTrue(args[3].startswith(b'%PDF'))
         self.assertEqual(reporting.get_report('owner',report_id)['email_status'],'accepted')
 
-    def test_verification_expiry_wrong_code_and_address_reset(self):
-        code=auth.verification_code('owner')
-        with self.assertRaises(ValueError):auth.verify_email('owner','wrong')
-        auth.verify_email('owner',code);self.assertTrue(auth.email_profile('owner')['email_verified'])
-        auth.set_email('owner','new@example.com');self.assertFalse(auth.email_profile('owner')['email_verified'])
-        code=auth.verification_code('owner')
-        with patch.object(auth.time,'time',return_value=auth.time.time()+601):
-            with self.assertRaises(ValueError):auth.verify_email('owner',code)
+    def test_email_edit_validation_and_missing_email(self):
+        auth.set_email('owner','new@example.com')
+        self.assertEqual(auth.email_profile('owner')['email'],'new@example.com')
         with self.assertRaises(ValueError):auth.set_email('owner','evil\r\nBcc: other@example.com')
+        with self.assertRaises(ValueError):auth.set_email('owner','other@example.com')
+        auth.register('legacy','long-test-password')
+        report_id=reporting.save_report('legacy',self.result)
+        with patch.object(reporting,'send_mail') as sender:
+            reporting.deliver_report('legacy',report_id);sender.assert_not_called()
+        self.assertEqual(reporting.get_report('legacy',report_id)['email_status'],'email_required')
 
     def test_gmail_tls_attachment_and_failure(self):
         env={'SKINSIGHT_SMTP_HOST':'smtp.gmail.com','SKINSIGHT_SMTP_PORT':'465','SKINSIGHT_SMTP_USER':'sender@example.com','SKINSIGHT_SMTP_PASSWORD':'fake-test-only','SKINSIGHT_MAIL_FROM':'sender@example.com'}

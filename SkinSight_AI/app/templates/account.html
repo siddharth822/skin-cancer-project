@@ -1,10 +1,9 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Email settings · SkinSight</title><link rel="stylesheet" href="/static/styles.css"></head><body>
 <header class="topbar"><div class="brand">SkinSight <span>AI</span></div><a href="/">Back to screening</a></header>
-<main class="page" style="max-width:600px"><section class="card"><h1>Email your reports</h1><p>Successful analyses automatically email a PDF screening report and doctor guidance to your verified address. No uploaded photo is attached.</p>
+<main class="page" style="max-width:600px"><section class="card"><h1>Email your reports</h1><p>Successful analyses automatically email a PDF screening report and doctor guidance to your registered address. No uploaded photo is attached.</p>
 {% if message %}<p role="status">{{ message }}</p>{% endif %}
 {% if not mail_ready %}<p class="error">Gmail sending is not configured. You can still download PDF reports.</p>{% endif %}
-<p>Status: {{ 'Verified' if profile.email_verified else 'Not verified' }}</p>
+<p>Reports are sent directly to the email below after each successful analysis.</p>
 <form action="/account/email" method="post"><input type="hidden" name="csrf" value="{{ csrf }}"><label for="email">Report email</label><input id="email" name="email" class="auth-input" type="email" required maxlength="254" value="{{ profile.email or '' }}"><button class="btn secondary">Save email</button></form>
-{% if not profile.email_verified %}<form action="/account/send-code" method="post" style="margin-top:20px"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn primary" {% if not mail_ready %}disabled{% endif %}>Send verification code</button></form>
-<form action="/account/verify" method="post" style="margin-top:20px"><input type="hidden" name="csrf" value="{{ csrf }}"><label for="code">Code from your email</label><input id="code" name="code" class="auth-input" required pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code"><button class="btn secondary">Verify email</button></form>{% endif %}
+
 <p class="small muted">Email contains screening information. Use an address you control. This is an educational report, not a diagnosis or assigned cancer stage.</p></section></main></body></html>
