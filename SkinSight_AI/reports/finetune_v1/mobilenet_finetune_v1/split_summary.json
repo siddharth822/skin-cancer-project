@@ -1,0 +1,15 @@
+{
+  "seed": 42,
+  "manifest_sha256": "ad2a4d69668157b8713ab9c66133abb53dce6d79ceb11f641670da03e8c64a73",
+  "counts": {
+    "train": 16330,
+    "validation": 5472,
+    "test": 5335
+  },
+  "grouping_coverage": {
+    "ISIC-2019::image": 2084,
+    "ISIC-2019::lesion": 22755,
+    "PAD-UFES-20::patient": 2298
+  },
+  "limitations": "Linked patient, lesion and exact-file hashes stay together. Image/lesion groups do not prove patient separation. Re-encoded near-duplicates and unseen external data need further evaluation."
+}

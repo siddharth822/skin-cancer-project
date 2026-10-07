@@ -28,3 +28,7 @@ datasets/
 *.h5
 *.hdf5
 *.keras
+
+# Private cohort identity records and generated training partitions
+*.calibration.csv
+*_split.csv

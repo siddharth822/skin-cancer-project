@@ -1,0 +1,533 @@
+{
+  "best_epoch": 3,
+  "best_balanced_accuracy": 0.5685458611327098,
+  "history": [
+    {
+      "epoch": 0,
+      "validation_loss": 1.0419277692236841,
+      "validation_balanced_accuracy": 0.5285618497622219
+    },
+    {
+      "epoch": 1,
+      "train_loss": 0.7436233790024467,
+      "validation_loss": 1.0662246712510517,
+      "validation_balanced_accuracy": 0.5565209366155396,
+      "seconds": 41.92161178588867
+    },
+    {
+      "epoch": 2,
+      "train_loss": 0.6675713801729506,
+      "validation_loss": 1.0475089836912037,
+      "validation_balanced_accuracy": 0.5640495902980395,
+      "seconds": 32.69417858123779
+    },
+    {
+      "epoch": 3,
+      "train_loss": 0.6462465486664702,
+      "validation_loss": 1.0487785110582455,
+      "validation_balanced_accuracy": 0.5685458611327098,
+      "seconds": 32.731621980667114
+    },
+    {
+      "epoch": 4,
+      "train_loss": 0.6256127063778864,
+      "validation_loss": 1.0486971807677716,
+      "validation_balanced_accuracy": 0.5596345904348385,
+      "seconds": 33.38249325752258
+    },
+    {
+      "epoch": 5,
+      "train_loss": 0.5918387739554696,
+      "validation_loss": 1.0380103678376842,
+      "validation_balanced_accuracy": 0.5630665002330635,
+      "seconds": 33.108837842941284
+    },
+    {
+      "epoch": 6,
+      "train_loss": 0.6042975423992544,
+      "validation_loss": 1.0281319625644763,
+      "validation_balanced_accuracy": 0.5480086310964102,
+      "seconds": 32.890870094299316
+    },
+    {
+      "epoch": 7,
+      "train_loss": 0.5730775819308516,
+      "validation_loss": 1.0176721808821334,
+      "validation_balanced_accuracy": 0.5464568975735229,
+      "seconds": 32.93318510055542
+    },
+    {
+      "epoch": 8,
+      "train_loss": 0.5816717521004054,
+      "validation_loss": 1.0172403662531209,
+      "validation_balanced_accuracy": 0.5384435457016102,
+      "seconds": 34.092928409576416
+    }
+  ],
+  "validation": {
+    "sample_count": 5472,
+    "balanced_accuracy": 0.5029917135823748,
+    "classification_report": {
+      "ACK": {
+        "precision": 0.28687196110210694,
+        "recall": 0.5654952076677316,
+        "f1-score": 0.38064516129032255,
+        "support": 313.0
+      },
+      "BCC": {
+        "precision": 0.6172539489671932,
+        "recall": 0.5619469026548672,
+        "f1-score": 0.588303416328894,
+        "support": 904.0
+      },
+      "MEL": {
+        "precision": 0.5091496232508074,
+        "recall": 0.47064676616915424,
+        "f1-score": 0.4891416752843847,
+        "support": 1005.0
+      },
+      "NEV": {
+        "precision": 0.820629849383843,
+        "recall": 0.7067610062893082,
+        "f1-score": 0.7594508975712777,
+        "support": 2544.0
+      },
+      "SCC": {
+        "precision": 0.14698162729658792,
+        "recall": 0.3916083916083916,
+        "f1-score": 0.21374045801526717,
+        "support": 143.0
+      },
+      "SEK": {
+        "precision": 0.3408662900188324,
+        "recall": 0.32149200710479575,
+        "f1-score": 0.33089579524680074,
+        "support": 563.0
+      },
+      "accuracy": 0.5835160818713451,
+      "macro avg": {
+        "precision": 0.45362555000322846,
+        "recall": 0.5029917135823748,
+        "f1-score": 0.4603629006228245,
+        "support": 5472.0
+      },
+      "weighted avg": {
+        "precision": 0.6323268084566658,
+        "recall": 0.5835160818713451,
+        "f1-score": 0.6015091208237316,
+        "support": 5472.0
+      }
+    },
+    "confusion_matrix": [
+      [
+        177,
+        58,
+        14,
+        9,
+        35,
+        20
+      ],
+      [
+        165,
+        508,
+        33,
+        50,
+        119,
+        29
+      ],
+      [
+        95,
+        69,
+        473,
+        228,
+        62,
+        78
+      ],
+      [
+        58,
+        90,
+        324,
+        1798,
+        57,
+        217
+      ],
+      [
+        32,
+        45,
+        1,
+        3,
+        56,
+        6
+      ],
+      [
+        90,
+        53,
+        84,
+        103,
+        52,
+        181
+      ]
+    ],
+    "class_order": [
+      "ACK",
+      "BCC",
+      "MEL",
+      "NEV",
+      "SCC",
+      "SEK"
+    ],
+    "per_class": {
+      "ACK": {
+        "support": 313,
+        "sensitivity": 0.5654952076677316,
+        "specificity": 0.9147121535181236,
+        "roc_auc": 0.8812701770596005
+      },
+      "BCC": {
+        "support": 904,
+        "sensitivity": 0.5619469026548672,
+        "specificity": 0.9310420315236427,
+        "roc_auc": 0.9067918368256281
+      },
+      "MEL": {
+        "support": 1005,
+        "sensitivity": 0.47064676616915424,
+        "specificity": 0.8979180658159839,
+        "roc_auc": 0.8025380150957769
+      },
+      "NEV": {
+        "support": 2544,
+        "sensitivity": 0.7067610062893082,
+        "specificity": 0.8657786885245902,
+        "roc_auc": 0.8901231763583874
+      },
+      "SCC": {
+        "support": 143,
+        "sensitivity": 0.3916083916083916,
+        "specificity": 0.9390129480202665,
+        "roc_auc": 0.8109099569974031
+      },
+      "SEK": {
+        "support": 563,
+        "sensitivity": 0.32149200710479575,
+        "specificity": 0.9287023833774699,
+        "roc_auc": 0.7584072752876779
+      }
+    },
+    "expected_calibration_error_10_bins": 0.05554971081743901,
+    "calibration_note": "Softmax probabilities are not clinically calibrated confidence estimates.",
+    "loss": 1.1108359896648696,
+    "by_source": {
+      "ISIC-2019": {
+        "sample_count": 4990,
+        "balanced_accuracy": 0.47371189437372924,
+        "classification_report": {
+          "ACK": {
+            "precision": 0.1475054229934924,
+            "recall": 0.4276729559748428,
+            "f1-score": 0.21935483870967742,
+            "support": 159.0
+          },
+          "BCC": {
+            "precision": 0.5928677563150074,
+            "recall": 0.5428571428571428,
+            "f1-score": 0.5667613636363636,
+            "support": 735.0
+          },
+          "MEL": {
+            "precision": 0.5093099671412924,
+            "recall": 0.4720812182741117,
+            "f1-score": 0.48998946259220233,
+            "support": 985.0
+          },
+          "NEV": {
+            "precision": 0.8256578947368421,
+            "recall": 0.7078968573730863,
+            "f1-score": 0.7622559652928417,
+            "support": 2482.0
+          },
+          "SCC": {
+            "precision": 0.13253012048192772,
+            "recall": 0.3963963963963964,
+            "f1-score": 0.1986455981941309,
+            "support": 111.0
+          },
+          "SEK": {
+            "precision": 0.3167701863354037,
+            "recall": 0.2953667953667954,
+            "f1-score": 0.30569430569430567,
+            "support": 518.0
+          },
+          "accuracy": 0.5783567134268537,
+          "macro avg": {
+            "precision": 0.4207735580006609,
+            "recall": 0.47371189437372924,
+            "f1-score": 0.42378358901992036,
+            "support": 4990.0
+          },
+          "weighted avg": {
+            "precision": 0.6390705762352192,
+            "recall": 0.5783567134268537,
+            "f1-score": 0.6024860240254343,
+            "support": 4990.0
+          }
+        },
+        "confusion_matrix": [
+          [
+            68,
+            37,
+            14,
+            6,
+            20,
+            14
+          ],
+          [
+            135,
+            399,
+            32,
+            44,
+            98,
+            27
+          ],
+          [
+            94,
+            65,
+            465,
+            224,
+            62,
+            75
+          ],
+          [
+            58,
+            83,
+            319,
+            1757,
+            57,
+            208
+          ],
+          [
+            20,
+            37,
+            1,
+            3,
+            44,
+            6
+          ],
+          [
+            86,
+            52,
+            82,
+            94,
+            51,
+            153
+          ]
+        ],
+        "class_order": [
+          "ACK",
+          "BCC",
+          "MEL",
+          "NEV",
+          "SCC",
+          "SEK"
+        ],
+        "per_class": {
+          "ACK": {
+            "support": 159,
+            "sensitivity": 0.4276729559748428,
+            "specificity": 0.91865038294349,
+            "roc_auc": 0.8552326497242
+          },
+          "BCC": {
+            "support": 735,
+            "sensitivity": 0.5428571428571428,
+            "specificity": 0.9356051703877791,
+            "roc_auc": 0.9066589926217256
+          },
+          "MEL": {
+            "support": 985,
+            "sensitivity": 0.4720812182741117,
+            "specificity": 0.8881398252184769,
+            "roc_auc": 0.7868476587007358
+          },
+          "NEV": {
+            "support": 2482,
+            "sensitivity": 0.7078968573730863,
+            "specificity": 0.85207336523126,
+            "roc_auc": 0.8808398138045281
+          },
+          "SCC": {
+            "support": 111,
+            "sensitivity": 0.3963963963963964,
+            "specificity": 0.9409715105554417,
+            "roc_auc": 0.8447769351643096
+          },
+          "SEK": {
+            "support": 518,
+            "sensitivity": 0.2953667953667954,
+            "specificity": 0.9262075134168157,
+            "roc_auc": 0.7385603083277501
+          }
+        },
+        "expected_calibration_error_10_bins": 0.05378083628798298,
+        "calibration_note": "Softmax probabilities are not clinically calibrated confidence estimates."
+      },
+      "PAD-UFES-20": {
+        "sample_count": 482,
+        "balanced_accuracy": 0.5685458611327098,
+        "classification_report": {
+          "ACK": {
+            "precision": 0.6987179487179487,
+            "recall": 0.7077922077922078,
+            "f1-score": 0.7032258064516129,
+            "support": 154.0
+          },
+          "BCC": {
+            "precision": 0.7266666666666667,
+            "recall": 0.6449704142011834,
+            "f1-score": 0.6833855799373041,
+            "support": 169.0
+          },
+          "MEL": {
+            "precision": 0.5,
+            "recall": 0.4,
+            "f1-score": 0.4444444444444444,
+            "support": 20.0
+          },
+          "NEV": {
+            "precision": 0.6507936507936508,
+            "recall": 0.6612903225806451,
+            "f1-score": 0.656,
+            "support": 62.0
+          },
+          "SCC": {
+            "precision": 0.24489795918367346,
+            "recall": 0.375,
+            "f1-score": 0.2962962962962963,
+            "support": 32.0
+          },
+          "SEK": {
+            "precision": 0.5833333333333334,
+            "recall": 0.6222222222222222,
+            "f1-score": 0.6021505376344086,
+            "support": 45.0
+          },
+          "accuracy": 0.6369294605809128,
+          "macro avg": {
+            "precision": 0.5674015931158788,
+            "recall": 0.5685458611327098,
+            "f1-score": 0.5642504441273444,
+            "support": 482.0
+          },
+          "weighted avg": {
+            "precision": 0.6532057506479556,
+            "recall": 0.6369294605809128,
+            "f1-score": 0.6430043190184057,
+            "support": 482.0
+          }
+        },
+        "confusion_matrix": [
+          [
+            109,
+            21,
+            0,
+            3,
+            15,
+            6
+          ],
+          [
+            30,
+            109,
+            1,
+            6,
+            21,
+            2
+          ],
+          [
+            1,
+            4,
+            8,
+            4,
+            0,
+            3
+          ],
+          [
+            0,
+            7,
+            5,
+            41,
+            0,
+            9
+          ],
+          [
+            12,
+            8,
+            0,
+            0,
+            12,
+            0
+          ],
+          [
+            4,
+            1,
+            2,
+            9,
+            1,
+            28
+          ]
+        ],
+        "class_order": [
+          "ACK",
+          "BCC",
+          "MEL",
+          "NEV",
+          "SCC",
+          "SEK"
+        ],
+        "per_class": {
+          "ACK": {
+            "support": 154,
+            "sensitivity": 0.7077922077922078,
+            "specificity": 0.8567073170731707,
+            "roc_auc": 0.8647054165346849
+          },
+          "BCC": {
+            "support": 169,
+            "sensitivity": 0.6449704142011834,
+            "specificity": 0.8690095846645367,
+            "roc_auc": 0.8754088133542544
+          },
+          "MEL": {
+            "support": 20,
+            "sensitivity": 0.4,
+            "specificity": 0.9826839826839827,
+            "roc_auc": 0.9228354978354978
+          },
+          "NEV": {
+            "support": 62,
+            "sensitivity": 0.6612903225806451,
+            "specificity": 0.9476190476190476,
+            "roc_auc": 0.9271505376344087
+          },
+          "SCC": {
+            "support": 32,
+            "sensitivity": 0.375,
+            "specificity": 0.9177777777777778,
+            "roc_auc": 0.6673263888888888
+          },
+          "SEK": {
+            "support": 45,
+            "sensitivity": 0.6222222222222222,
+            "specificity": 0.954233409610984,
+            "roc_auc": 0.9174167302313755
+          }
+        },
+        "expected_calibration_error_10_bins": 0.08652831508905559,
+        "calibration_note": "Softmax probabilities are not clinically calibrated confidence estimates."
+      }
+    }
+  },
+  "selection_source": "PAD-UFES-20",
+  "fitting_source": "PAD-UFES-20",
+  "fitting_records": 1380,
+  "test_evaluated": false
+}

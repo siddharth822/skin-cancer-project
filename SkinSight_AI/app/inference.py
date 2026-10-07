@@ -1,6 +1,7 @@
 from pathlib import Path
 import io
 import os
+import math
 import numpy as np
 from PIL import Image
 import torch
@@ -18,6 +19,7 @@ class Predictor:
         self.model = None
         self.class_names = None
         self.image_size = 160
+        self.temperature = 1.0
         self.meta = {}
         self._load()
 
@@ -25,6 +27,9 @@ class Predictor:
         if not CHECKPOINT.exists():
             return
         ckpt = torch.load(CHECKPOINT, map_location=self.device, weights_only=True)
+        self.temperature = float(ckpt.get("temperature", 1.0))
+        if not math.isfinite(self.temperature) or self.temperature <= 0:
+            raise ValueError("Checkpoint temperature must be finite and positive")
         self.class_names = ckpt["class_names"]
         self.image_size = int(ckpt.get("image_size", 160))
         self.meta = {
@@ -32,6 +37,9 @@ class Predictor:
             "dataset": ckpt.get("dataset", "PAD-UFES-20"),
             "balanced_accuracy": ckpt.get("balanced_accuracy"),
             "training_mode": ckpt.get("training_mode"),
+            "temperature": self.temperature,
+            "selection_source": ckpt.get("selection_source", "combined"),
+            "calibration": ckpt.get("calibration"),
         }
         if self.meta["architecture"] != "mobilenet_v3_small":
             raise ValueError("Expected a MobileNetV3-Small checkpoint produced by ml/train.py")
@@ -63,7 +71,7 @@ class Predictor:
         arr = np.asarray(image)
         x = self.transform(image=arr)["image"].unsqueeze(0).to(self.device)
         logits = self.model(x)
-        probs = torch.softmax(logits, dim=1)[0].cpu().numpy()
+        probs = torch.softmax(logits / self.temperature, dim=1)[0].cpu().numpy()
 
         order = np.argsort(probs)[::-1]
         ranked = [

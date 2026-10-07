@@ -104,3 +104,53 @@ This mode uses deterministic resize/normalization without training augmentation.
 It is a quick baseline, not full-model fine-tuning. Cached features are kept in RAM;
 validation/test partitioning and checkpoint selection rules remain unchanged.
 The resulting checkpoint still loads through the same full MobileNet predictor.
+
+## Fine-tuning without reusing the reported test
+
+Warm-start from the baseline and select using PAD smartphone validation:
+
+```powershell
+.\.venv\Scripts\python ml\train.py --manifest data\combined_manifest.csv --init-checkpoint models\skinsight_mobilenetv3_small.pt --fine-tune --epochs 5 --lr 0.00003 --batch-size 32 --size 160 --selection-source PAD-UFES-20 --skip-test --output-dir models_finetune
+```
+
+`--skip-test` never loads test images or computes test metrics. It still preserves
+split identity records for auditing. The warm-start checkpoint is evaluated as epoch
+zero and retained if no fine-tuned epoch improves the chosen validation score.
+Source-specific selection scores are labeled; they must not be confused with the
+combined validation score or old held-out scores. Full-model training is slower
+than cached classifier-head training, particularly on a CPU.
+
+## New external evaluation and calibration
+
+Provide a new, independently collected labeled manifest with columns
+`image_path,label,source,original_id,image_sha256,patient_id,lesion_id`. Labels must
+come from authoritative ground truth and map to the supported six classes; do not
+invent labels. SHA-256 must match each actual image. Missing patient identifiers
+limit independence claims; genuine patient IDs are required for calibration.
+
+```powershell
+.\.venv\Scripts\python ml\evaluate_external.py --manifest external_test.csv --checkpoint models_finetune\skinsight_mobilenetv3_small.pt --reference-dir models_baseline --output external_report.json
+.\.venv\Scripts\python ml\calibrate.py --manifest new_calibration.csv --checkpoint models_finetune\skinsight_mobilenetv3_small.pt --reference-dir models_baseline --output-checkpoint models_finetune\calibrated.pt
+```
+
+Both tools reject overlap with the recorded training, validation, and reported test
+identities and exact file hashes. Aliased identities and re-encoded images still
+need a cohort/provenance review. Calibration uses a **new cohort**, not the old
+reported test. Temperature scaling changes model scores but not class ordering or
+accuracy. NLL improvement on calibration data is not proof of performance on a new
+test. Clinical confidence remains unvalidated.
+
+The calibrated checkpoint has a companion `.calibration.csv` identity file. Keep it
+private and alongside the checkpoint when evaluating a new external test: the
+external evaluation command requires it and also rejects calibration/test overlap.
+Do not upload identity CSVs or patient images to GitHub. Only aggregate reports may
+be published. The app accepts positive finite temperature metadata automatically.
+
+A candidate independently collected clinical cohort is Stanford's DDI (656 images,
+570 patients, biopsy-grounded diagnoses). Its official documentation requires each
+user to register and agree to its research-use terms. Access instructions are at
+https://ddi-dataset.github.io/#access and the official portal is linked there.
+DDI was **not downloaded or evaluated** in this workspace. Its supported categories,
+patient identifiers, and permitted use must be checked before evaluation. If patient
+identifiers are unavailable, do not randomly split its images into supposedly
+patient-independent calibration and test sets.
