@@ -90,3 +90,17 @@ External smartphone performance remains unknown until separately evaluated.
 Use a fresh output directory for another run. Reusing test feedback to tune a
 model contaminates the test set even when filenames are different. Existing
 checkpoints/test results will not be overwritten automatically.
+
+## Fast CPU baseline
+
+Use `--cache-features` without `--fine-tune` or `--from-scratch` to extract frozen
+pretrained MobileNet features once and train only its classifier. For example:
+
+```powershell
+.\.venv\Scripts\python ml\train.py --manifest data\combined_manifest.csv --epochs 5 --batch-size 64 --size 160 --cache-features --device cpu --output-dir models_baseline
+```
+
+This mode uses deterministic resize/normalization without training augmentation.
+It is a quick baseline, not full-model fine-tuning. Cached features are kept in RAM;
+validation/test partitioning and checkpoint selection rules remain unchanged.
+The resulting checkpoint still loads through the same full MobileNet predictor.

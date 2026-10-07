@@ -82,6 +82,20 @@ class WorkflowTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'one-hot'):
                 build_isic_manifest(root/'gt.csv',root)
 
+    def test_cached_features_match_full_model_logits(self):
+        from features import cache_features
+        with tempfile.TemporaryDirectory() as tmp:
+            path=Path(tmp)/'image.png'; Image.new('RGB',(64,64),'brown').save(path)
+            frame=pd.DataFrame([dict(image_path=str(path),label='NEV')])
+            model=create_model(pretrained=False).eval()
+            cached=cache_features(model,frame,tfms(False,64),torch.device('cpu'),2,0)
+            image,_=ManifestDataset(frame,tfms(False,64))[0]
+            with torch.no_grad():
+                full=model(image.unsqueeze(0))
+                head=model.classifier(cached.tensors[0])
+            torch.testing.assert_close(full,head)
+            self.assertEqual(cached.tensors[1].tolist(),[3])
+
     def test_evaluation_handles_absent_classes(self):
         with tempfile.TemporaryDirectory() as tmp:
             image=Path(tmp)/'one.png'; Image.new('RGB',(64,64)).save(image)

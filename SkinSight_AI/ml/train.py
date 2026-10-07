@@ -17,6 +17,7 @@ from dataset import ManifestDataset, CLASS_NAMES
 from model import create_model
 from splits import linked_groups, split_three_way
 from evaluation import summarize
+from features import cache_features
 
 
 def seed_all(seed=42):
@@ -65,8 +66,8 @@ def evaluate(model, loader, device):
     return loss, report['balanced_accuracy'], report['classification_report']
 
 
-def report_frame(model, frame, size, batch_size, workers, device):
-    loader = DataLoader(ManifestDataset(frame, tfms(False, size)), batch_size=batch_size,
+def report_frame(model, frame, size, batch_size, workers, device, dataset=None):
+    loader = DataLoader(dataset if dataset is not None else ManifestDataset(frame, tfms(False, size)), batch_size=batch_size,
                         shuffle=False, num_workers=workers)
     loss, labels, probabilities = collect(model, loader, device)
     report = summarize(labels, probabilities); report['loss'] = loss
@@ -89,10 +90,13 @@ def main():
     p.add_argument('--output-dir', default='models')
     p.add_argument('--from-scratch', action='store_true')
     p.add_argument('--fine-tune', action='store_true')
+    p.add_argument('--cache-features', action='store_true', help='Fast frozen-backbone baseline; uses deterministic preprocessing without train augmentation')
     p.add_argument('--device', choices=['auto', 'cpu', 'cuda'], default='auto')
     a = p.parse_args(); seed_all()
     if a.epochs < 1 or a.batch_size < 2 or a.size < 32 or a.workers < 0 or a.lr <= 0:
         p.error('epochs/lr must be positive, batch-size >= 2, size >= 32, workers >= 0')
+    if a.cache_features and (a.fine_tune or a.from_scratch):
+        p.error('--cache-features requires pretrained classifier-head training')
     if a.from_scratch and not a.fine_tune:
         p.error('--from-scratch requires --fine-tune so random features are not frozen')
     if a.device == 'cuda' and not torch.cuda.is_available():
@@ -123,28 +127,36 @@ def main():
         'limitations': 'Linked patient, lesion and exact-file hashes stay together. Image/lesion groups do not prove patient separation. Re-encoded near-duplicates and unseen external data need further evaluation.',
     }
     (out / 'split_summary.json').write_text(json.dumps(split_info, indent=2))
-    training = DataLoader(ManifestDataset(tr, tfms(True, a.size)), batch_size=a.batch_size,
-                          sampler=sampler(tr), num_workers=a.workers, pin_memory=device.type == 'cuda',
-                          drop_last=len(tr) % a.batch_size == 1)
-    validation = DataLoader(ManifestDataset(va, tfms(False, a.size)), batch_size=a.batch_size,
-                            shuffle=False, num_workers=a.workers)
     model = create_model(pretrained=not a.from_scratch, freeze_backbone=not a.fine_tune).to(device)
+    training_dataset = ManifestDataset(tr, tfms(True, a.size))
+    validation_dataset = ManifestDataset(va, tfms(False, a.size))
+    training_network = model
+    if a.cache_features:
+        print('Caching frozen features; training augmentation disabled for this baseline', flush=True)
+        training_dataset = cache_features(model, tr, tfms(False, a.size), device, a.batch_size, a.workers)
+        validation_dataset = cache_features(model, va, tfms(False, a.size), device, a.batch_size, a.workers)
+        training_network = model.classifier
+    training = DataLoader(training_dataset, batch_size=a.batch_size,
+                          sampler=sampler(tr), num_workers=0 if a.cache_features else a.workers,
+                          pin_memory=device.type == 'cuda', drop_last=len(tr) % a.batch_size == 1)
+    validation = DataLoader(validation_dataset, batch_size=a.batch_size,
+                            shuffle=False, num_workers=0 if a.cache_features else a.workers)
     optimizer = torch.optim.AdamW([x for x in model.parameters() if x.requires_grad], lr=a.lr, weight_decay=1e-4)
     criterion = nn.CrossEntropyLoss(label_smoothing=.05)
     best = -1.; history = []; best_epoch = None
     print('Device:', device, 'Architecture: mobilenet_v3_small', flush=True)
     for epoch in range(1, a.epochs + 1):
-        start = time.time(); model.train(); run = 0.
+        start = time.time(); model.train(); run = 0.; seen = 0
         if not a.fine_tune:
             model.features.eval()
         for i, (x, y) in enumerate(training, 1):
             x, y = x.to(device), y.to(device); optimizer.zero_grad(set_to_none=True)
-            logits = model(x); loss = criterion(logits, y); loss.backward(); optimizer.step()
-            run += float(loss.detach()) * len(y)
+            logits = training_network(x); loss = criterion(logits, y); loss.backward(); optimizer.step()
+            run += float(loss.detach()) * len(y); seen += len(y)
             if i % 100 == 0 or i == len(training):
                 print(f'epoch {epoch}/{a.epochs}, batch {i}/{len(training)}', flush=True)
-        vl, score, report = evaluate(model, validation, device)
-        history.append({'epoch': epoch, 'train_loss': run / len(tr), 'validation_loss': vl,
+        vl, score, report = evaluate(training_network, validation, device)
+        history.append({'epoch': epoch, 'train_loss': run / seen, 'validation_loss': vl,
                         'validation_balanced_accuracy': score, 'seconds': time.time() - start})
         print(history[-1], flush=True)
         if score > best:
@@ -153,11 +165,12 @@ def main():
                         'architecture': 'mobilenet_v3_small', 'image_size': a.size,
                         'balanced_accuracy': best, 'validation_report': report,
                         'dataset': 'PAD-UFES-20 + ISIC-2019',
-                        'training_mode': 'from_scratch' if a.from_scratch else ('imagenet_finetune' if a.fine_tune else 'imagenet_head_only')}, checkpoint)
+                        'training_mode': 'imagenet_cached_head' if a.cache_features else ('from_scratch' if a.from_scratch else ('imagenet_finetune' if a.fine_tune else 'imagenet_head_only'))}, checkpoint)
     # Only after selection, reload the best checkpoint and evaluate test data once.
     best_checkpoint = torch.load(checkpoint, map_location=device, weights_only=True)
     model.load_state_dict(best_checkpoint['model_state'])
-    validation_report = report_frame(model, va, a.size, a.batch_size, a.workers, device)
+    validation_report = report_frame(training_network, va, a.size, a.batch_size, a.workers, device,
+                                     validation_dataset if a.cache_features else None)
     test_report = report_frame(model, test, a.size, a.batch_size, a.workers, device)
     test_report['evaluation_note'] = 'Held out from fitting and checkpoint selection. Reusing this test set to tune the model invalidates independent-test claims. Patient independence depends on grouping coverage.'
     test_report['split_summary'] = split_info

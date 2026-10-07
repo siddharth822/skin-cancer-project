@@ -30,7 +30,7 @@ GUIDANCE = {
         "urgency": "Arrange prompt in-person dermatology assessment and biopsy consideration."
     },
     "SEK": {
-        "name": "Seborrheic Keratosis",
+        "name": "Benign / Seborrheic Keratosis",
         "risk": "Usually lower concern",
         "message": "This is commonly benign, but visual similarity with other lesions can occur.",
         "urgency": "Seek clinical review if rapidly changing, bleeding, painful, or uncertain."
