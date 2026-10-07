@@ -6,9 +6,14 @@ const placeholder = document.getElementById("placeholder");
 const fileName = document.getElementById("fileName");
 const error = document.getElementById("error");
 
+let imageVersion = 0;
+
 chooseBtn.addEventListener("click", () => input.click());
 
 input.addEventListener("change", () => {
+  imageVersion++;
+  analyzeBtn.disabled = true;
+  clearResult();
   error.hidden = true;
   const file = input.files?.[0];
   if (!file) return;
@@ -18,6 +23,7 @@ input.addEventListener("change", () => {
     return;
   }
 
+  if (preview.src.startsWith("blob:")) URL.revokeObjectURL(preview.src);
   const url = URL.createObjectURL(file);
   preview.src = url;
   preview.hidden = false;
@@ -30,22 +36,25 @@ analyzeBtn.addEventListener("click", async () => {
   const file = input.files?.[0];
   if (!file) return;
 
+  clearResult();
   error.hidden = true;
   analyzeBtn.disabled = true;
   analyzeBtn.textContent = "Analyzing…";
 
+  const version = imageVersion;
   const form = new FormData();
   form.append("image", file);
 
   try {
     const res = await fetch("/api/predict", { method: "POST", body: form });
     const data = await res.json();
+    if (version !== imageVersion) return;
     if (!res.ok) throw new Error(data.detail || "Analysis failed.");
     renderResult(data);
   } catch (e) {
-    showError(e.message);
+    if (version === imageVersion) showError(e.message);
   } finally {
-    analyzeBtn.disabled = false;
+    analyzeBtn.disabled = !input.files?.[0];
     analyzeBtn.textContent = "Analyze Image";
   }
 });
@@ -76,7 +85,13 @@ function renderResult(data) {
   });
 }
 
+function clearResult() {
+  document.getElementById("result").hidden = true;
+  document.getElementById("emptyResult").hidden = false;
+}
+
 function showError(msg) {
+  clearResult();
   error.textContent = msg;
   error.hidden = false;
 }

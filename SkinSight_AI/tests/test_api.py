@@ -15,6 +15,7 @@ from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'ml'))
 os.environ['NO_ALBUMENTATIONS_UPDATE'] = '1'
+import numpy as np
 import torch
 import uvicorn
 from PIL import Image
@@ -57,13 +58,24 @@ class APITests(unittest.TestCase):
             self.assertIn(b'MobileNet',response.read())
         with urllib.request.urlopen(self.url+'/api/health') as response:
             self.assertTrue(json.load(response)['model_ready'])
-        raw=io.BytesIO();Image.new('RGB',(64,64),'brown').save(raw,format='PNG')
+        raw=io.BytesIO();Image.fromarray(np.random.default_rng(42).integers(50,200,(128,128,3),dtype=np.uint8)).save(raw,format='PNG')
         with self.upload(raw.getvalue()) as response:
             result=json.load(response)
             self.assertIn(result['label'],CLASS_NAMES)
             self.assertIn('guidance',result)
             self.assertIn('stage',result)
             self.assertIn('not a medical diagnosis',result['medical_disclaimer'])
+
+    def test_avatar_rejected_before_inference(self):
+        from PIL import ImageDraw
+        avatar=Image.new("RGB",(128,128),(128,140,140))
+        ImageDraw.Draw(avatar).text((35,45),"SP",fill="white")
+        raw=io.BytesIO();avatar.save(raw,format="PNG")
+        with patch.object(main.predictor,"predict_bytes") as prediction:
+            with self.assertRaises(urllib.error.HTTPError) as error: self.upload(raw.getvalue())
+            self.assertEqual(error.exception.code,422)
+            self.assertIn("graphic",json.load(error.exception)["detail"])
+            prediction.assert_not_called()
 
     def test_invalid_image_rejected(self):
         with self.assertRaises(urllib.error.HTTPError) as error: self.upload(b'invalid')

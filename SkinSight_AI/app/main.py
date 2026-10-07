@@ -7,6 +7,7 @@ import io
 from pathlib import Path
 
 from .inference import Predictor
+from .image_quality import validate_photo
 from .guidance import GUIDANCE, stage_info
 
 app = FastAPI(
@@ -55,6 +56,11 @@ async def predict(image: UploadFile = File(...)):
         im.verify()
     except Exception:
         raise HTTPException(status_code=400, detail="The uploaded file is not a valid image.")
+
+    try:
+        validate_photo(Image.open(io.BytesIO(raw)))
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
 
     try:
         result = predictor.predict_bytes(raw)

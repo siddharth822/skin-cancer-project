@@ -154,3 +154,7 @@ DDI was **not downloaded or evaluated** in this workspace. Its supported categor
 patient identifiers, and permitted use must be checked before evaluation. If patient
 identifiers are unavailable, do not randomly split its images into supposedly
 patient-independent calibration and test sets.
+
+## Upload quality checks
+
+The API rejects tiny images, blank/extremely exposed images, grayscale inputs and obvious flat-color graphics before classification (HTTP 422, no prediction). Changing images or receiving an error clears the old result. These conservative heuristics are not a trained skin/lesion detector: unrelated natural photos may still pass, and legitimate images may be rejected. Do not treat acceptance as proof that a lesion is present. A validated semantic detector needs representative skin and non-skin training and evaluation data.
