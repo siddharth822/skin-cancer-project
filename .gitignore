@@ -32,3 +32,7 @@ datasets/
 # Private cohort identity records and generated training partitions
 *.calibration.csv
 *_split.csv
+
+# Local login accounts and sessions
+*.sqlite3
+*.sqlite3-*

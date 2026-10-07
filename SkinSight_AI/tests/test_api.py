@@ -1,5 +1,8 @@
 """Run the actual HTTP API with a temporary artificial checkpoint."""
 import io
+import http.cookiejar
+import re
+import urllib.parse
 import json
 import os
 import socket
@@ -20,13 +23,14 @@ import torch
 import uvicorn
 from PIL import Image
 from model import create_model, CLASS_NAMES
-from app import inference, main
+from app import inference, main, auth
 
 class APITests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         torch.set_num_threads(2)
         cls.temp = tempfile.TemporaryDirectory()
+        cls.auth_patch=patch.object(auth,'DB_PATH',Path(cls.temp.name)/'accounts.sqlite3');cls.auth_patch.start()
         checkpoint=Path(cls.temp.name)/'test.pt'
         torch.save(dict(model_state=create_model(pretrained=False).state_dict(),
                         class_names=CLASS_NAMES,architecture='mobilenet_v3_small',image_size=64),checkpoint)
@@ -42,19 +46,25 @@ class APITests(unittest.TestCase):
             if cls.server.started: break
             time.sleep(.02)
         if not cls.server.started: raise RuntimeError('API did not start')
+        cls.opener=urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
+        html=cls.opener.open(cls.url+'/register').read().decode()
+        cls.csrf=re.search(r'name="csrf" value="([^"]+)"',html).group(1)
+        form=urllib.parse.urlencode(dict(username='testuser',password='unique-test-password',csrf=cls.csrf)).encode()
+        cls.opener.open(cls.url+'/register',form).close()
+        cls.opener.open(cls.url+'/login',form).close()
 
     @classmethod
     def tearDownClass(cls):
         cls.server.should_exit=True;cls.thread.join(timeout=5)
-        cls.sock.close();cls.predictor_patch.stop();cls.temp.cleanup()
+        cls.sock.close();cls.predictor_patch.stop();cls.auth_patch.stop();cls.temp.cleanup()
 
     def upload(self,raw,content_type='image/png'):
         boundary='skinsighttest'
         body=(f'--{boundary}\r\nContent-Disposition: form-data; name="image"; filename="image.png"\r\nContent-Type: {content_type}\r\n\r\n').encode()+raw+f'\r\n--{boundary}--\r\n'.encode()
-        return urllib.request.urlopen(urllib.request.Request(self.url+'/api/predict',data=body,headers={'Content-Type':f'multipart/form-data; boundary={boundary}'}))
+        return self.opener.open(urllib.request.Request(self.url+'/api/predict',data=body,headers={'Content-Type':f'multipart/form-data; boundary={boundary}', 'X-CSRF-Token':self.csrf}))
 
     def test_prediction_and_html(self):
-        with urllib.request.urlopen(self.url+'/') as response:
+        with self.opener.open(self.url+'/') as response:
             self.assertIn(b'MobileNet',response.read())
         with urllib.request.urlopen(self.url+'/api/health') as response:
             self.assertTrue(json.load(response)['model_ready'])
@@ -76,6 +86,20 @@ class APITests(unittest.TestCase):
             self.assertEqual(error.exception.code,422)
             self.assertIn("graphic",json.load(error.exception)["detail"])
             prediction.assert_not_called()
+
+    def test_unusable_photos_rejected(self):
+        for image in [Image.new("RGB",(32,32),"brown"), Image.new("RGB",(128,128),"black"), Image.new("RGB",(128,128),"white")]:
+            with self.subTest(size=image.size):
+                raw=io.BytesIO();image.save(raw,format="PNG")
+                with patch.object(main.predictor,"predict_bytes") as prediction:
+                    with self.assertRaises(urllib.error.HTTPError) as error: self.upload(raw.getvalue())
+                    self.assertEqual(error.exception.code,422)
+                    prediction.assert_not_called()
+
+    def test_authentication_required(self):
+        with self.assertRaises(urllib.error.HTTPError) as error:
+            urllib.request.urlopen(urllib.request.Request(self.url+"/api/predict",data=b"image=invalid"))
+        self.assertEqual(error.exception.code,401)
 
     def test_invalid_image_rejected(self):
         with self.assertRaises(urllib.error.HTTPError) as error: self.upload(b'invalid')

@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{{ 'Create account' if register else 'Log in' }} · SkinSight AI</title><link rel="stylesheet" href="/static/styles.css"></head>
+<body><header class="topbar"><div class="brand">SkinSight <span>AI</span></div><div class="badge">Educational Prototype</div></header>
+<main class="page" style="max-width:520px"><section class="card"><h1>{{ 'Create your account' if register else 'Welcome back' }}</h1><p class="muted">{{ 'Register to use the skin-photo screening demo.' if register else 'Log in to analyze a skin photo.' }}</p>
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+<form method="post" action="{{ '/register' if register else '/login' }}">
+<input type="hidden" name="csrf" value="{{ csrf }}">
+<label for="username">Username</label><input id="username" name="username" required minlength="3" maxlength="32" pattern="[a-zA-Z0-9_]+" autocomplete="username" class="auth-input">
+<label for="password">Password</label><input id="password" name="password" type="password" required minlength="{{ 12 if register else 1 }}" maxlength="128" autocomplete="{{ 'new-password' if register else 'current-password' }}" class="auth-input">
+{% if register %}<p class="small muted">Use 12 or more characters. Choose a unique password.</p>{% endif %}
+<button class="btn primary" type="submit">{{ 'Create account' if register else 'Log in' }}</button></form>
+<p>{{ 'Already registered?' if register else 'New here?' }} <a href="{{ '/login' if register else '/register' }}">{{ 'Log in' if register else 'Create an account' }}</a></p>
+<p class="small muted">This prototype provides image screening, not a diagnosis or cancer stage.</p>
+</section></main></body></html>

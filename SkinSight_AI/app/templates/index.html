@@ -4,12 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>SkinSight AI</title>
+  <meta name="csrf-token" content="{{ csrf }}">
   <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
   <header class="topbar">
     <div class="brand">SkinSight <span>AI</span></div>
-    <div class="badge">Research / Educational Prototype</div>
+    <div class="badge">{{ username }}</div>
+    <form method="post" action="/logout"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn secondary" type="submit">Log out</button></form>
   </header>
 
   <main class="page">
@@ -102,6 +104,7 @@
             <strong>Stage information</strong>
             <p><b id="stageStatus"></b></p>
             <p id="stageText"></p>
+            <div id="stageGuide"></div>
           </div>
 
           <p class="disclaimer" id="disclaimer"></p>

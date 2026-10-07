@@ -1,5 +1,5 @@
-from fastapi import FastAPI, File, HTTPException, Request, UploadFile
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi import FastAPI, File, HTTPException, Request, UploadFile, Form, Depends
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from PIL import Image
@@ -8,6 +8,8 @@ from pathlib import Path
 
 from .inference import Predictor
 from .image_quality import validate_photo
+from . import auth
+import secrets
 from .guidance import GUIDANCE, stage_info
 
 app = FastAPI(
@@ -23,10 +25,61 @@ predictor = Predictor()
 
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
-    return templates.TemplateResponse(
+    user = auth.current_user(request)
+    if not user:
+        return RedirectResponse("/login", status_code=303)
+    csrf = request.cookies.get("skinsight_csrf") or secrets.token_urlsafe(32)
+    response = templates.TemplateResponse(
         "index.html",
-        {"request": request, "model_ready": predictor.ready, "model_meta": predictor.meta},
+        {"request": request, "model_ready": predictor.ready, "model_meta": predictor.meta, "username": user, "csrf": csrf},
     )
+
+    response.set_cookie("skinsight_csrf", csrf, httponly=True, secure=auth.SECURE_COOKIE, samesite="strict")
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+def auth_page(request, register=False, error=None, status=200):
+    csrf = request.cookies.get("skinsight_csrf") or secrets.token_urlsafe(32)
+    response = templates.TemplateResponse("login.html", {"request": request, "register": register, "error": error, "csrf": csrf}, status_code=status)
+    response.set_cookie("skinsight_csrf", csrf, httponly=True, secure=auth.SECURE_COOKIE, samesite="strict")
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+@app.get("/login", response_class=HTMLResponse)
+def login_page(request: Request):
+    return auth_page(request)
+
+@app.get("/register", response_class=HTMLResponse)
+def register_page(request: Request):
+    return auth_page(request, register=True)
+
+@app.post("/register")
+def register_account(request: Request, username: str = Form(...), password: str = Form(...), csrf: str = Form(...)):
+    auth.check_csrf(request, csrf)
+    try:
+        auth.register(username, password)
+    except ValueError as exc:
+        return auth_page(request, register=True, error=str(exc), status=400)
+    return RedirectResponse("/login", status_code=303)
+
+@app.post("/login")
+def login_account(request: Request, username: str = Form(...), password: str = Form(...), csrf: str = Form(...)):
+    auth.check_csrf(request, csrf)
+    try:
+        token = auth.login(username, password, request.client.host if request.client else "unknown")
+    except ValueError as exc:
+        return auth_page(request, error=str(exc), status=400)
+    response = RedirectResponse("/", status_code=303)
+    response.set_cookie("skinsight_session", token, max_age=auth.SESSION_SECONDS, httponly=True, secure=auth.SECURE_COOKIE, samesite="strict")
+    return response
+
+@app.post("/logout")
+def logout_account(request: Request, csrf: str = Form(...)):
+    auth.check_csrf(request, csrf)
+    auth.logout(request)
+    response = RedirectResponse("/login", status_code=303)
+    response.delete_cookie("skinsight_session")
+    return response
 
 @app.get("/api/health")
 def health():
@@ -37,7 +90,8 @@ def health():
     }
 
 @app.post("/api/predict")
-async def predict(image: UploadFile = File(...)):
+async def predict(request: Request, image: UploadFile = File(...), user: str = Depends(auth.require_user)):
+    auth.check_csrf(request, request.headers.get("X-CSRF-Token"))
     if not predictor.ready:
         raise HTTPException(
             status_code=503,

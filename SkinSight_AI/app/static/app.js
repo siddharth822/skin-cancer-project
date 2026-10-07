@@ -46,7 +46,7 @@ analyzeBtn.addEventListener("click", async () => {
   form.append("image", file);
 
   try {
-    const res = await fetch("/api/predict", { method: "POST", body: form });
+    const res = await fetch("/api/predict", { method: "POST", body: form, headers: {"X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').content} });
     const data = await res.json();
     if (version !== imageVersion) return;
     if (!res.ok) throw new Error(data.detail || "Analysis failed.");
@@ -70,6 +70,13 @@ function renderResult(data) {
   document.getElementById("doctorText").textContent = data.guidance.urgency;
   document.getElementById("stageStatus").textContent = data.stage.status;
   document.getElementById("stageText").textContent = data.stage.explanation;
+  const guide = document.getElementById("stageGuide");
+  guide.replaceChildren();
+  (data.stage.education || []).forEach(item => {
+    const p = document.createElement("p");
+    p.textContent = item;
+    guide.appendChild(p);
+  });
   document.getElementById("disclaimer").textContent = data.medical_disclaimer;
 
   const box = document.getElementById("probabilities");

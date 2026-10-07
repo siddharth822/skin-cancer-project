@@ -206,3 +206,7 @@ h3 { font-size: 1.8rem; margin: 3px 0 0; }
   .dropzone { height: 300px; }
   .badge { display: none; }
 }
+
+.auth-input { display:block; width:100%; box-sizing:border-box; padding:12px; margin:8px 0 20px; border:1px solid #53708d; border-radius:8px; background:#0c1c2b; color:#fff; font:inherit; }
+.auth-input:focus { outline:2px solid #38d0a5; }
+a { color:#80bbff; }

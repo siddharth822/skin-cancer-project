@@ -158,3 +158,11 @@ patient-independent calibration and test sets.
 ## Upload quality checks
 
 The API rejects tiny images, blank/extremely exposed images, grayscale inputs and obvious flat-color graphics before classification (HTTP 422, no prediction). Changing images or receiving an error clears the old result. These conservative heuristics are not a trained skin/lesion detector: unrelated natural photos may still pass, and legitimate images may be rejected. Do not treat acceptance as proof that a lesion is present. A validated semantic detector needs representative skin and non-skin training and evaluation data.
+
+## Accounts and login
+
+On Windows, double-click `start_windows.bat` from the extracted app folder, or use the existing PowerShell setup commands. Open the local app, choose **Create an account**, register a username and a password of at least 12 characters, then log in. Logout revokes the session. Accounts persist in `data/accounts.sqlite3` on the machine hosting this app; separate computers have separate accounts. Keep this database private and outside shared ZIPs/Git. Uploaded photos are processed in memory and are not saved as account history.
+
+Passwords use salted PBKDF2-SHA256 hashes; sessions are random server-side records with an eight-hour expiry. Login attempts are rate limited, and POST operations require CSRF tokens. This is a local demo, without email verification or password recovery. For HTTPS hosting set `SKINSIGHT_SECURE_COOKIES=1`; internet deployment requires its own operational review. The health endpoint is public, but the screening page and prediction API require login.
+
+Cancer stage information is educational. The app never assigns a clinical stage from an image. For melanoma it explains stages 0–IV; for BCC/SCC it explains the different assessment requirements. Stage determination needs confirmed diagnosis and clinical/pathology findings.

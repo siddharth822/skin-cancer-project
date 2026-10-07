@@ -41,6 +41,17 @@ def stage_info(label: str):
     if label in {"BCC", "MEL", "SCC"}:
         return {
             "status": "Not determinable from a photo",
+            "education": ([
+                "Melanoma stage overview — educational only; no stage is assigned to this image.",
+                "Stage 0: melanoma in situ, limited to the outer skin layer.",
+                "Stages I–II: localized melanoma; pathology including thickness and ulceration distinguishes stages.",
+                "Stage III: regional lymph nodes or nearby skin/lymphatic spread.",
+                "Stage IV: spread to distant sites or organs.",
+            ] if label == "MEL" else [
+                "A clinician must confirm the diagnosis and determine whether formal staging applies.",
+                "BCC is usually assessed by local extent and recurrence risk; routine numerical staging is uncommon.",
+                "SCC staging depends on the anatomic site, tumor features and evidence of lymph-node or distant spread.",
+            ]),
             "explanation": (
                 "Clinical cancer Stage I–IV cannot be assigned safely from this image alone. "
                 "Staging requires pathology/biopsy and may require tumor depth, ulceration, "
