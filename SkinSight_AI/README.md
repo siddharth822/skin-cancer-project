@@ -54,7 +54,7 @@ eliminate clinical-versus-dermoscopic domain shift. The 224px mirror is a practi
 baseline; original ISIC images contain more detail.
 
 This app is an educational research tool, not a diagnosis or clinical staging
-system. No real-data model has yet been trained or clinically validated here.
+system. A real-data frozen-feature baseline has now been trained; see reports/baseline_v1/RESULTS.md. It has not been clinically validated.
 
 ## Tests
 

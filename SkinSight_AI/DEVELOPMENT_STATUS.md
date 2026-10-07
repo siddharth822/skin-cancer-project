@@ -1,40 +1,18 @@
-# Verified development status
+# Current development status
 
-The app and trainer now share torchvision MobileNetV3-Small and the same checkpoint
-filename. The predictor uses a restricted checkpoint loader. Static assets and the
-default checkpoint resolve relative to the application files rather than the shell.
+The real-data baseline is trained and connected to the app. See
+[baseline results](reports/baseline_v1/RESULTS.md) for measured performance and limits.
+Thirteen regression tests passed. Downloads succeeded after network publication;
+the parallel PAD transfer passed the publisher-provided MD5 checksum check.
+The home page, health endpoint and a real held-out PAD image prediction passed.
 
-Dataset preparation validates one-hot ISIC labels and image matching, preserves
-patient/lesion grouping where metadata exists, and hashes image files. Training
-reserves train/validation/test folds, checks source/class coverage, selects weights
-on validation only, and exports overall and source-specific held-out reports.
+The baseline uses frozen pretrained MobileNet features and five classifier epochs,
+not full-model fine-tuning. Combined held-out balanced accuracy is 49.6%; PAD-only
+balanced accuracy is 52.6%. These results do not support medical deployment.
+Genuine ISIC patient mapping, external validation and calibrated probabilities remain
+outstanding. Do not reuse the reported test partition for model tuning.
 
-## Verification completed
-
-- Twelve regression tests: HTTP prediction, invalid image and missing model responses,
-  checkpoint loading, recursive manifests, one-hot validation, dummy-ID handling,
-  transitive identity grouping, partition isolation, and metric calculations.
-- Two epochs on 240 synthetic images: training, best-checkpoint selection, test
-  isolation, report generation, checkpoint reload, and HTTP prediction.
-- Uploaded metadata: 2,298 PAD records and 24,839 supported ISIC records permit
-  source/class coverage in three partitions. This metadata-only feasibility check
-  did not include image hashes or the official ISIC lesion metadata; final folds
-  must be generated from actual downloaded images and metadata.
-- Dependencies passed pip check. Notebook code cells passed syntax compilation;
-  exported source ZIP passed integrity checks and contains no synthetic checkpoint.
-
-## Outstanding external work
-
-No real-image model has been trained in this workspace. Kaggle and official ISIC
-HTTP requests were denied by the cloud egress proxy. GPU hardware and Kaggle runtime
-access are unavailable here. Network domain additions were saved to the environment
-draft but were not applied to the live instance during validation.
-
-Full downloads and GPU notebook execution remain unverified. Research accuracy,
-external smartphone performance, genuine ISIC patient separation, and probability
-calibration cannot be inferred from software tests. The notebook includes a fixed
-internal test; repeated tuning against its results invalidates independence.
-
-The next supported step is to apply the saved network settings and retry cloud
-access, or execute the bundled notebook in a Kaggle account with GPU/Internet access.
-Only deploy the resulting real-data checkpoint after reviewing the test report.
+The prepared environment contains the checkpoint at
+models/skinsight_mobilenetv3_small.pt. Git stores code and aggregate reports;
+downloadable trained-app ZIP stores the checkpoint. Live processes must restart
+in future tasks. A fresh-task restoration has not been independently verified.
