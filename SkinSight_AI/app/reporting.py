@@ -112,3 +112,34 @@ def delivery_message(status):
         'not_configured': 'Gmail sending is not configured. Start the app with start_with_gmail.bat.',
         'failed': 'Could not send through Gmail. Check internet access and whether the network permits smtp.gmail.com on port 465, then try again.',
     }.get(status, 'Unable to send the email. Your report can still be downloaded.')
+
+
+def dashboard_data(username):
+    """Aggregate only the signed-in account's stored results, never example data."""
+    from collections import Counter
+    with auth.connect() as db:
+        rows=db.execute('SELECT payload,email_status FROM reports WHERE username=? ORDER BY rowid DESC',(username,)).fetchall()
+    reports=[]
+    descriptions={'accepted':'Accepted by mail server','pending':'Processing','failed':'Sending failed','not_configured':'Sender not configured','email_required':'Add email','auth_failed':'Sender login rejected','recipient_refused':'Recipient rejected','sender_refused':'Sender rejected','tls_failed':'Secure connection failed'}
+    for row in rows:
+        data=json.loads(row['payload'])
+        created=datetime.fromisoformat(data['created_at']).astimezone(timezone.utc)
+        data['display_date']=created.strftime('%d %b %Y · %H:%M')
+        data['email_description']=descriptions.get(row['email_status'],'Not sent')
+        reports.append(data)
+    now=datetime.now(timezone.utc)
+    monthly=Counter(datetime.fromisoformat(r['created_at']).astimezone(timezone.utc).strftime('%Y-%m') for r in reports)
+    month_items=[]
+    for offset in range(5,-1,-1):
+        absolute=now.year*12+now.month-1-offset
+        month_date=datetime(absolute//12,absolute%12+1,1,tzinfo=timezone.utc)
+        key=month_date.strftime('%Y-%m')
+        month_items.append({'label':month_date.strftime('%b %y'),'count':monthly[key]})
+    maximum=max([item['count'] for item in month_items]+[1])
+    for item in month_items:item['height']=round(item['count']/maximum*100,2)
+    frequencies=Counter(r['label'] for r in reports)
+    return {'reports':reports,'stats':{'total':len(reports),
+        'today':sum(datetime.fromisoformat(r['created_at']).astimezone(timezone.utc).date()==now.date() for r in reports),
+        'average':sum(r['confidence'] for r in reports)/len(reports) if reports else 0,
+        'cancer_classes':sum(r['label'] in {'MEL','BCC','SCC'} for r in reports)},
+        'months':month_items,'frequencies':[{'label':label,'count':frequencies[label],'percent':round(frequencies[label]/len(reports)*100,2) if reports else 0} for label in ['ACK','BCC','MEL','NEV','SCC','SEK']]}

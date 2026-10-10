@@ -75,6 +75,8 @@ class APITests(unittest.TestCase):
             self.assertIn('guidance',result)
             self.assertIn('stage',result)
             self.assertIn('not a medical diagnosis',result['medical_disclaimer'])
+        with self.opener.open(self.url+'/reports/'+result['report_id']) as response:
+            self.assertIn(b'SAVED SCREENING',response.read())
         with self.opener.open(self.url+result['report_url']) as response:
             self.assertEqual(response.headers['Content-Type'],'application/pdf')
             self.assertTrue(response.read().startswith(b'%PDF-1.4'))
@@ -83,6 +85,16 @@ class APITests(unittest.TestCase):
         self.assertEqual(error.exception.code,401)
         with self.opener.open(self.url+result['email_status_url']) as response:
             self.assertEqual(json.load(response)['email_status'],'not_configured')
+
+    def test_public_pages_and_dashboard(self):
+        for path in ["/home","/about","/faq","/stages"]:
+            with urllib.request.urlopen(self.url+path) as response:
+                self.assertEqual(response.status,200)
+                self.assertIn(b"SkinSight",response.read())
+        with self.opener.open(self.url+"/dashboard") as response:
+            self.assertIn(b"testuser",response.read())
+        with urllib.request.urlopen(self.url+"/dashboard") as response:
+            self.assertTrue(response.url.endswith("/login"))
 
     def test_avatar_rejected_before_inference(self):
         from PIL import ImageDraw

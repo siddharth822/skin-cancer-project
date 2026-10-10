@@ -179,3 +179,11 @@ Every successful analysis creates an account-owned PDF screening report with mod
 Gmail uses verified TLS at smtp.gmail.com:465. Environment variables are SKINSIGHT_SMTP_HOST, SKINSIGHT_SMTP_PORT, SKINSIGHT_SMTP_USER, SKINSIGHT_SMTP_PASSWORD (App Password), and SKINSIGHT_MAIL_FROM. Sending and receiving accounts may be different. Gmail acceptance does not guarantee inbox delivery. Sending is best effort, not a durable queue. Live Gmail delivery remains untested here without sender credentials. Windows launcher execution is not verified in this Linux environment.
 
 Reports contain educational screening information, not a diagnosis or clinical cancer stage. Keep databases and sender credentials private and outside shared ZIPs or Git.
+
+## Site pages and saved-report dashboard
+
+The existing root URL `/` keeps its authenticated analysis workflow; `/analyze` is an alias. Added pages are `/home`, `/about`, `/faq` and `/stages` (public), `/dashboard` (your account's saved report summaries) and `/reports/{report_id}` (owner-only saved result). Navigation links connect the pages. The interface includes responsive layouts, light/dark theme selection, drag-and-drop upload and a loading state; prediction, login, PDF and direct-email behavior are retained.
+
+Dashboard counts and charts use actual account reports, with an empty state for new accounts. Cancer-class predictions are labeled as model outputs, not diagnoses or clinical risk totals. Images remain unpersisted, so saved reports have no image thumbnails. Stage guide content is educational; no stage is predicted from an image.
+
+When updating an existing Windows installation, stop the server, back up the folder, and replace app files from the new ZIP. Preserve the existing `.venv` and private `data` directory to keep accounts/reports and the encrypted Gmail sender settings. Do not share `data` or credentials with teammates. Start with the same existing `start_with_gmail.bat` workflow.
